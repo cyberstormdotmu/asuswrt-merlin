@@ -463,15 +463,10 @@ function del_Row(rowdata){
 	var pptpd_clientlist_value = "";
 	var rowLength = document.getElementById("pptpd_clientlist_table").rows.length;
 	for(var k = 0; k < rowLength; k += 1) {
-		for(var j = 1; j < document.getElementById("pptpd_clientlist_table").rows[k].cells.length - 1; j += 1) {
-			if(j == 1)
-				pptpd_clientlist_value += "<";
-			else {
-				pptpd_clientlist_value += document.getElementById("pptpd_clientlist_table").rows[k].cells[1].innerHTML;
-				pptpd_clientlist_value += ">";
-				pptpd_clientlist_value += document.getElementById("pptpd_clientlist_table").rows[k].cells[2].innerHTML;
-			}
-		}
+		pptpd_clientlist_value += "<";
+		pptpd_clientlist_value += document.getElementById("pptpd_clientlist_table").rows[k].cells[1].innerHTML;
+		pptpd_clientlist_value += ">";
+		pptpd_clientlist_value += document.getElementById("pptpd_clientlist_table").rows[k].cells[2].innerHTML;
 	}
 
 	pptpd_clientlist_array = pptpd_clientlist_value;
@@ -864,6 +859,7 @@ function check_vpn_conflict() {		//if conflict with LAN ip & DHCP ip pool & stat
 										<div id="wan_ctrl" class="formfontdesc"></div>
 										<div id="dualwan_ctrl" style="display:none;" class="formfontdesc"></div>
 										<div class="formfontdesc" style="margin-top:-10px;font-weight: bolder;"><#PPTP_desc3#></div>
+										<div class="formfontdesc" style="margin-top:-10px;">(7) <#NSlookup_help#></div>
 										<div class="formfontdesc" style="margin:-10px 0px 0px -15px;">
 											<ul>
 												<li>

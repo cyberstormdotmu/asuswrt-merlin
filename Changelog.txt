@@ -1,6 +1,39 @@
 Asuswrt-Merlin Changelog
 ========================
 
+378.53 (26-Apr-2015)
+   - NEW: Merged with Asus GPL 378_4980 (with pieces from 378_4850 for AC56/AC68
+          and 378_5183 beta for AC87)
+   - NEW: OpenVPN policy routing.  You can select client IPs or destination
+          IPs which you want to route through your VPN tunnel.  You can enter
+          a single IP (192.168.0.1) or a whole subnet in CIDR format (for 
+          example 74.125.226.112/30).
+          You can optionally block WAN access to these as well when the
+          tunnel goes down.
+   - NEW: Ad blocker based on Trend Micro's Web Reputation System (WRS).
+          This is an EXPERIMENTAL feature implemented by Asus but that
+          isn't enabled in the stock firmware.
+   - CHANGED: Updated Tor to 0.2.5.12
+   - CHANGED: Those providing a signed SSL certificate for httpd can now 
+              provide chain certificate.  The three PEMs must be in
+              that order: client, intermediate, CA.  (Patch by sasoiliev)
+   - CHANGED: The setting to enable the neighbour solication filter rule
+              for Comcast's request flooding was changed to "ipv6_ns_drop",
+              and now defaults to "0" as this hack causes issues with
+              other ISPs.
+   - CHANGED: Backported dnsmasq patch that reverts a fix for Windows 8
+              clients as it could cause issues with other clients.
+   - FIXED: DNSFilter would fail if you had it set to "Router", and didn't
+            have a DNS IP entered on the WAN page.
+   - FIXED: MSS clamping wasn't applied to traffic in both direction, moved
+            it to the mangle table.
+   - FIXED: OpenVPN client firewall "external" mode does not exist - removed
+            from the webui.
+   - FIXED: PPTP account list could become corrupted after removing an entry
+            on the PPTP server page.
+
+
+
 378.52_2 (5-Apr-2015)
    - CHANGED: Updated AiCloud prebuilt binaries for MIPS models
    - CHANGED: Applied kernel patch for MIPS kernel ported from 376_3861,

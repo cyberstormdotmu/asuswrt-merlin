@@ -261,6 +261,8 @@ enum {
 	MODEL_RTAC53U,
 	MODEL_RTAC3200,
 	MODEL_RTAC88U,
+	MODEL_RTAC3100,
+	MODEL_RTAC5300,
 	MODEL_RTN14UHP,
 	MODEL_RTN10U,
 	MODEL_RTN10P,
@@ -440,6 +442,8 @@ static inline int have_usb3_led(int model)
 		case MODEL_DSLAC68U:
 		case MODEL_RTAC3200:
 		case MODEL_RTAC88U:
+		case MODEL_RTAC3100:
+		case MODEL_RTAC5300:
 		case MODEL_R7000:
 		case MODEL_R8000:
 		case MODEL_WS880:
@@ -483,6 +487,9 @@ struct ifaces_stats {
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(ary) (sizeof(ary) / sizeof((ary)[0]))
+#endif
+#ifdef RTCONFIG_MMC_LED
+	LED_MMC,
 #endif
 
 #if defined(RTCONFIG_HAS_5G)
@@ -878,8 +885,12 @@ static inline void enable_wifi_bled(char *ifname)
 #if defined(RTCONFIG_QCA)
 		v = LED_OFF;	/* WiFi not ready. Don't turn on WiFi LED here. */		
 #endif
-#if defined(RTAC1200HP)
+#if defined(RTAC1200HP) || defined(RTN56UB1)
 		if(!get_radio(1, 0) && unit==1) //*5G WiFi not ready. Don't turn on WiFi GPIO LED . */
+		 	v=LED_OFF;
+#endif		
+#if defined(RTN56UB1)
+		if(!get_radio(0, 0) && unit==0) //*2G WiFi not ready. Don't turn on WiFi GPIO LED . */
 		 	v=LED_OFF;
 #endif		
 		led_control((!unit)? LED_2G:LED_5G, v);

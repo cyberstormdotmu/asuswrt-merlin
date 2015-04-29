@@ -614,6 +614,10 @@ define RouterOptions
 		sed -i "/RTCONFIG_WLAN_LED/d" $(1); \
 		echo "RTCONFIG_WLAN_LED=y" >>$(1); \
 	fi; \
+	if [ "$(ETLAN_LED)" = "y" ]; then \
+		sed -i "/RTCONFIG_FAKE_ETLAN_LED/d" $(1); \
+		echo "RTCONFIG_FAKE_ETLAN_LED=y" >>$(1); \
+	fi; \
 	if [ "$(EXT_LED_WPS)" = "y" ]; then \
 		sed -i "/RTCONFIG_EXT_LED_WPS/d" $(1); \
 		echo "RTCONFIG_EXT_LED_WPS=y" >>$(1); \
@@ -645,6 +649,10 @@ define RouterOptions
 	if [ "$(BTN_WPS_RST)" = "y" ]; then \
 		sed -i "/RTCONFIG_WPS_RST_BTN/d" $(1); \
 		echo "RTCONFIG_WPS_RST_BTN=y" >>$(1); \
+	fi; \
+	if [ "$(BTN_WPS_ALLLED)" = "y" ]; then \
+		sed -i "/RTCONFIG_WPS_ALLLED_BTN/d" $(1); \
+		echo "RTCONFIG_WPS_ALLLED_BTN=y" >>$(1); \
 	fi; \
 	if [ "$(TURBO)" = "y" ]; then \
 		sed -i "/RTCONFIG_TURBO/d" $(1); \
@@ -1172,13 +1180,17 @@ define RouterOptions
 		sed -i "/RTCONFIG_ADBLOCK/d" $(1); \
 		echo "RTCONFIG_ADBLOCK=y" >>$(1); \
 	fi; \
+	if [ "$(TRAFFIC_CONTROL)" = "y" ]; then \
+		sed -i "/RTCONFIG_TRAFFIC_CONTROL/d" $(1); \
+		echo "RTCONFIG_TRAFFIC_CONTROL=y" >>$(1); \
+	fi; \
 	if [ "$(SPEEDTEST)" = "y" ]; then \
 		sed -i "/RTCONFIG_SPEEDTEST/d" $(1); \
 		echo "RTCONFIG_SPEEDTEST=y" >>$(1); \
 	fi; \
-	if [ "$(BCM794)" = "y" ]; then \
-		sed -i "/RTCONFIG_BCM794/d" $(1); \
-		echo "RTCONFIG_BCM794=y" >>$(1); \
+	if [ "$(BCM_794)" = "y" ]; then \
+		sed -i "/RTCONFIG_BCM_794/d" $(1); \
+		echo "RTCONFIG_BCM_794=y" >>$(1); \
 	fi; \
 	if [ "$(BCM10)" = "y" ]; then \
 		sed -i "/RTCONFIG_BCM10/d" $(1); \
@@ -1208,6 +1220,10 @@ define RouterOptions
 		sed -i "/RTCONFIG_BUILDBCM7/d" $(1); \
 		echo "RTCONFIG_BUILDBCM7=y" >>$(1); \
 	fi; \
+	if [ "$(ROMCFE)" = "y" ]; then \
+		sed -i "/RTCONFIG_ROMCFE/d" $(1); \
+		echo "RTCONFIG_ROMCFE=y" >>$(1); \
+	fi; \
 	if [ "$(SSD)" = "y" ]; then \
 		sed -i "/RTCONFIG_BCMSSD/d" $(1); \
 		echo "RTCONFIG_BCMSSD=y" >>$(1); \
@@ -1228,6 +1244,10 @@ define RouterOptions
 		sed -i "/RTCONFIG_NOWL/d" $(1); \
 		echo "RTCONFIG_NOWL=y" >>$(1); \
 	fi; \
+	if [ "$(TCODE)" = "y" ]; then \
+		sed -i "/RTCONFIG_TCODE/d" $(1); \
+		echo "RTCONFIG_TCODE=y" >>$(1); \
+	fi; \
 	if [ "$(WIFILOGO)" = "y" ]; then \
 		sed -i "/RTCONFIG_WIFILOGO/d" $(1); \
 		echo "RTCONFIG_WIFILOGO=y" >>$(1); \
@@ -1240,8 +1260,8 @@ define RouterOptions
 		echo "# RTCONFIG_JFFS2USERICON is not set" >>$(1); \
 	fi; \
 	if [ "$(SWITCH2)" = "RTL8365MB" ]; then \
-		sed -i "/RTCONFIG_RTL8365MB/d" $(1); \
-		echo "RTCONFIG_RTL8365MB=y" >>$(1); \
+		sed -i "/RTCONFIG_EXT_RTL8365MB/d" $(1); \
+		echo "RTCONFIG_EXT_RTL8365MB=y" >>$(1); \
 	fi; \
 	if [ "$(TOR)" = "y" ]; then \
 		sed -i "/RTCONFIG_TOR/d" $(1); \
@@ -1258,6 +1278,18 @@ define RouterOptions
 	if [ "$(NOWLALL)" = "y" ]; then \
 		sed -i "/RTCONFIG_ALLNOWLALL/d" $(1); \
 		echo "RTCONFIG_ALLNOWL=y" >>$(1); \
+	fi; \
+	if [ "$(STAINFO)" = "y" ]; then \
+		sed -i "/RTCONFIG_STAINFO/d" $(1); \
+		echo "RTCONFIG_STAINFO=y" >>$(1); \
+	fi; \
+	if [ "$(CLOUDCHECK)" = "y" ]; then \
+		sed -i "/RTCONFIG_CLOUDCHECK/d" $(1); \
+		echo "RTCONFIG_CLOUDCHECK=y" >>$(1); \
+	fi; \
+	if [ "$(BCM_MMC)" = "y" ]; then \
+		sed -i "/RTCONFIG_MMC_LED/d" $(1); \
+		echo "RTCONFIG_MMC_LED=y" >>$(1); \
 	fi; \
 	)
 	$(call platformRouterOptions, $(1))
@@ -1938,9 +1970,9 @@ define KernelConfig
 			echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR=0x01810000" >>$(1); \
 			echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_LEN=0x2000" >>$(1); \
 		elif [ "$(BUILD_NAME)" = "RT-AC68U" ]; then \
-                        echo "CONFIG_DUMP_PREV_OOPS_MSG=y" >>$(1); \
-                        echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR=0xC0000000" >>$(1); \
-                        echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_LEN=0x2500" >>$(1); \
+			echo "CONFIG_DUMP_PREV_OOPS_MSG=y" >>$(1); \
+			echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR=0xC0000000" >>$(1); \
+			echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_LEN=0x2500" >>$(1); \
 		elif [ "$(BUILD_NAME)" = "RT-AC3200" ]; then \
 			echo "CONFIG_DUMP_PREV_OOPS_MSG=y" >>$(1); \
 			echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR=0xC0000000" >>$(1); \
@@ -1961,7 +1993,7 @@ define KernelConfig
 	else \
 		echo "# CONFIG_RTAC3200 is not set" >>$(1); \
 	fi; \
-	if [ "$(BCM794)" = "y" ]; then \
+	if [ "$(BCM_794)" = "y" ]; then \
 		sed -i "/CONFIG_CR4_OFFLOAD/d" $(1); \
 		echo "# CONFIG_CR4_OFFLOAD is not set" >>$(1); \
 		sed -i "/CONFIG_PLAT_UART_CLOCKS/d" $(1); \
@@ -2100,7 +2132,7 @@ define KernelConfig
 		sed -i "/CONFIG_RTL8365MB/d" $(1); \
 		echo "CONFIG_RTL8365MB=m" >>$(1); \
 	fi; \
-	if [ "$(RTAC88U)" = "y" ]; then \
+	if [ "$(BCM_MMC)" = "y" ]; then \
 		sed -i "/CONFIG_MMC/d" $(1); \
 		echo "CONFIG_MMC=y" >>$(1); \
 		sed -i "/CONFIG_MMC_BLOCK/d" $(1); \

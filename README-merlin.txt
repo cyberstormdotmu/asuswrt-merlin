@@ -1,5 +1,5 @@
-Asuswrt-Merlin - build 378.52_2 (5-Apr-2015)
-=============================================
+Asuswrt-Merlin - build 378.53 (26-Apr-2015)
+===========================================
 
 About
 -----
@@ -54,7 +54,7 @@ Here is a list of features that Asuswrt-merlin adds over the original
 firmware:
 
 System:
-   - Based on 3.0.0.4.378_4608 source code from Asus
+   - Based on 3.0.0.4.378_4980 source code from Asus
    - Various bugfixes and optimizations
    - Some components were updated to newer versions, for improved
      stability and security
@@ -92,6 +92,8 @@ Networking:
    - Custom DDNS (through a user script)
    - Advanced NAT loopback (as an alternative to the default one)
    - TOR support, individual client control
+   - Policy routing for the OpenVPN client (based on source or
+     destination IPs), sometimes referred to as "selective routing")
 
 
 Web interface:
@@ -165,7 +167,7 @@ to have a USB disk plugged in.  This space will survive reboots (but it
 flashing!).  It will also be available fairly early at boot (before 
 USB disks).
 
-The option is enabled by default.  You can however disable it (not
+The option is enabled by default.  You can however disable it (NOT
 recommended, as various features such as the Traffic Analyzer 
 will depend on it), or, reformat it from the 
 Administration -> System page.
@@ -215,7 +217,7 @@ Available scripts:
                   started/stopped, or an OpenVPN client connects to a
                   remote server.  Uses the same syntax/parameters as
                   the "up" and "down" scripts in OpenVPN.
- * post-mount:  Just after a partition is mounted
+ * post-mount: Just after a partition is mounted
  * pre-mount: Just before a partition is mounted.  Be careful with 
               this script.  This is run in a blocking call and will 
               block the mounting of the partition  for which it is 
@@ -643,6 +645,34 @@ the URL to use your private API key from afraid.org):
 
 Finally, like all custom scripts, the option to support custom scripts and 
 config files must be enabled under Administration -> System.
+
+
+
+OpenVPN client policy routing
+-----------------------------
+When configuring your router to act as an OpenVPN client (for instance 
+to connect your whole LAN to an OpenVPN tunnel provider), you can 
+define policies that determines which clients, or which destinations 
+should be routed through the tunnel, rather than having all of your
+traffic automatically routed through it.
+
+On the OpenVPN Clients page, set "Redirect Internet traffic" to 
+"Policy RUles".  A new section will appear below, where you can 
+add routing rules.  The "Source IP" is your local client, while 
+"Destination" is the remote server on the Internet.  The field can be 
+left empty (or set to 0.0.0.0) to signify "any IP".  You can also 
+specify a whole subnet, in CIDR notation (for example, 74.125.226.112/30).
+
+For example, to have all your clients use the VPN tunnel when trying to 
+access an IP from this block that belongs to Google:
+
+	RouteGoogle	0.0.0.0		74.125.0.0/16
+
+Another setting exposed when enabling Policy routing is to prevent your 
+routed clients from accessing the Internet if the VPN tunnel goes down.  
+To do so, enable "Block routed clients if tunnel goes down".  Note that 
+this setting only works if your OpenVPN client did establish a tunnel, 
+and that this tunnel went down for some reason.
 
 
 

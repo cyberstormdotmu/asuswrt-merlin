@@ -77,6 +77,9 @@ ifeq ($(RTCONFIG_USB),y)
 CFLAGS += -I$(TOP)/libdisk
 CFLAGS += -DU2EC
 LDFLAGS += -L$(TOP)/libdisk -ldisk
+ifeq ($(BCM_MMC),y)
+CFLAGS += -DBCM_MMC
+endif
 endif
 
 ifeq ($(RTCONFIG_PUSH_EMAIL),y)
@@ -251,9 +254,12 @@ endif
 
 ifeq ($(RTCONFIG_BWDPI),y)
 OBJS += bwdpi.o
-OBJS += bwdpi_monitor.o
 OBJS += bwdpi_check.o
 OBJS += bwdpi_wred_alive.o
+endif
+
+ifeq ($(or $(RTCONFIG_BWDPI),$(RTCONFIG_TRAFFIC_CONTROL)),y)
+OBJS += hour_monitor.o
 endif
 
 ifeq ($(RTCONFIG_IPERF),y)
@@ -268,7 +274,7 @@ ifeq ($(RT4GAC55U),y)
 OBJS += lteled.o
 endif
 
-ifeq ($(RTAC68U),y)
+ifeq ($(BUILD_NAME), RT-AC68U)
 OBJS += sysdeps/broadcom/cfe.o
 endif
 
@@ -345,9 +351,6 @@ ifeq ($(RTCONFIG_QTN),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc start_qtn_stateless
 	@cd $(INSTALLDIR)/sbin && ln -sf rc restart_qtn
 endif
-ifeq ($(RTCONFIG_USB),y)
-	@cd $(INSTALLDIR)/sbin && ln -sf rc usbled
-endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc ntp
 	@cd $(INSTALLDIR)/sbin && ln -sf rc autodet
 	@cd $(INSTALLDIR)/sbin && ln -sf rc ddns_updated
@@ -379,7 +382,7 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc rtkswitch
 endif
 
-ifeq ($(RTCONFIG_RTL8365MB),y)
+ifeq ($(RTCONFIG_EXT_RTL8365MB),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc rtkswitch
 endif
 
@@ -392,9 +395,12 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc tcpcheck
 	@cd $(INSTALLDIR)/sbin && ln -sf rc auto_macclone
 ifeq ($(RTCONFIG_USB),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc usbled
 	@cd $(INSTALLDIR)/sbin && ln -sf rc get_apps_name
-	@cd $(INSTALLDIR)/sbin && ln -sf rc asus_sd
+ifeq ($(BCM_MMC),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc asus_mmc
+endif
+	@cd $(INSTALLDIR)/sbin && ln -sf rc asus_sd
 	@cd $(INSTALLDIR)/sbin && ln -sf rc asus_lp
 	@cd $(INSTALLDIR)/sbin && ln -sf rc asus_sg
 	@cd $(INSTALLDIR)/sbin && ln -sf rc asus_sr
@@ -466,16 +472,21 @@ endif
 ifeq ($(RTCONFIG_BWDPI),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc rsasign_sig_check
 	@cd $(INSTALLDIR)/sbin && ln -sf rc bwdpi
-	@cd $(INSTALLDIR)/sbin && ln -sf rc bwdpi_monitor
 	@cd $(INSTALLDIR)/sbin && ln -sf rc bwdpi_check
 	@cd $(INSTALLDIR)/sbin && ln -sf rc bwdpi_wred_alive
+endif
+ifeq ($(or $(RTCONFIG_BWDPI),$(RTCONFIG_TRAFFIC_CONTROL)),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc hour_monitor
 endif
 ifeq ($(RTCONFIG_SPEEDTEST),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc speedtest
 endif
 ifeq ($(RTCONFIG_USB_MODEM),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc write_3g_ppp_conf
-	@cd $(INSTALLDIR)/sbin && ln -sf rc modem_bytes_plus
+ifeq ($(or $(RTCONFIG_JFFS2),$(RTCONFIG_BRCM_NAND_JFFS2),$(RTCONFIG_UBIFS)),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc lplus
+	@cd $(INSTALLDIR)/sbin && ln -sf rc lminus
+endif
 endif
 ifeq ($(RTCONFIG_IPERF),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc monitor
