@@ -1,5 +1,5 @@
-asuswrt-merlin
-==============
+asuswrt-merlin (xwrt-vortex)
+============== =============
 
 This is an enhanced version of Asuswrt - the firmware used by all recent Asus routers. 
 
@@ -17,6 +17,13 @@ At this time, the supported devices are:
 - RT-AC68P
 - RT-AC87U
 - RT-AC3200
+ 
+XWRT-Vortex supported devices are:
+ - Linksys EA6900
+ - Linksys EA9200
+ - Netgear R7000
+ - Netgear R8000
+ - Huawei WS880
 
 NOTE: all the "R" versions (for example RT-N66R) are the same as their 
 "U" counterparts, they are just different packages aimed at large 
