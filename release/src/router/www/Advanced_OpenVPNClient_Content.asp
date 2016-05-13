@@ -126,7 +126,6 @@
 }
 </style>
 <script>
-var $j = jQuery.noConflict();
 
 wan_route_x = '<% nvram_get("wan_route_x"); %>';
 wan_nat_x = '<% nvram_get("wan_nat_x"); %>';
@@ -215,30 +214,9 @@ function initial()
 	// Set these based on a compound field
 	setRadioValue(document.form.vpn_client_x_eas, ((document.form.vpn_clientx_eas.value.indexOf(''+(openvpn_unit)) >= 0) ? "1" : "0"));
 
-	// Decode into editable format
-	openvpn_decodeKeys(0);
 	update_visibility();
 }
 
-function openvpn_decodeKeys(entities){
-	var expr;
-
-	if (entities == 1)
-		expr = new RegExp('&#62;','gm');
-	else
-		expr = new RegExp('>','gm');
-
-	document.getElementById('edit_vpn_crt_client1_static').value = document.getElementById('edit_vpn_crt_client1_static').value.replace(expr,"\r\n");
-	document.getElementById('edit_vpn_crt_client1_ca').value = document.getElementById('edit_vpn_crt_client1_ca').value.replace(expr,"\r\n");
-	document.getElementById('edit_vpn_crt_client1_key').value = document.getElementById('edit_vpn_crt_client1_key').value.replace(expr,"\r\n");
-	document.getElementById('edit_vpn_crt_client1_crt').value = document.getElementById('edit_vpn_crt_client1_crt').value.replace(expr,"\r\n");
-
-	document.getElementById('edit_vpn_crt_client2_static').value = document.getElementById('edit_vpn_crt_client2_static').value.replace(expr,"\r\n");
-	document.getElementById('edit_vpn_crt_client2_ca').value = document.getElementById('edit_vpn_crt_client2_ca').value.replace(expr,"\r\n");
-	document.getElementById('edit_vpn_crt_client2_key').value = document.getElementById('edit_vpn_crt_client2_key').value.replace(expr,"\r\n");
-	document.getElementById('edit_vpn_crt_client2_crt').value = document.getElementById('edit_vpn_crt_client2_crt').value.replace(expr,"\r\n");
-
-}
 
 function update_visibility(){
 
@@ -297,49 +275,60 @@ function update_visibility(){
 
 }
 
-function set_Keys(auth){
+var client1_ca_bak, client1_crt_bak, client1_key_bak, client1_static_bak;
+var client2_ca_bak, client2_crt_bak, client2_key_bak, client2_static_bak;
+
+function set_Keys(){
 	cal_panel_block();
-	if((auth=='tls') || (auth=="secret")){
-		$j("#tlsKey_panel").fadeIn(300);
-	}       
+	if (openvpn_unit == "1") {
+		client1_ca_bak = document.getElementById("edit_vpn_crt_client1_ca").value;
+		client1_crt_bak = document.getElementById("edit_vpn_crt_client1_crt").value;
+		client1_key_bak = document.getElementById("edit_vpn_crt_client1_key").value;
+		client1_static_bak = document.getElementById("edit_vpn_crt_client1_static").value;
+	} else {
+		client2_ca_bak = document.getElementById("edit_vpn_crt_client2_ca").value;
+		client2_crt_bak = document.getElementById("edit_vpn_crt_client2_crt").value;
+		client2_key_bak = document.getElementById("edit_vpn_crt_client2_key").value;
+		client2_static_bak = document.getElementById("edit_vpn_crt_client2_static").value;
+	}
+
+	$("#tlsKey_panel").fadeIn(300);
 }
  
-function cancel_Key_panel(auth){
-	if((auth == 'tls') || (auth == "secret")){
-		this.FromObject ="0";
-		$j("#tlsKey_panel").fadeOut(300);	
-
-		if (openvpn_unit == 1) {
-			setTimeout("document.getElementById('edit_vpn_crt_client1_static').value = '<% nvram_clean_get("vpn_crt_client1_static"); %>';", 300);
-			setTimeout("document.getElementById('edit_vpn_crt_client1_ca').value = '<% nvram_clean_get("vpn_crt_client1_ca"); %>';", 300);
-			setTimeout("document.getElementById('edit_vpn_crt_client1_crt').value = '<% nvram_clean_get("vpn_crt_client1_crt"); %>';", 300);
-			setTimeout("document.getElementById('edit_vpn_crt_client1_key').value = '<% nvram_clean_get("vpn_crt_client1_key"); %>';", 300);
-		} else {
-			setTimeout("document.getElementById('edit_vpn_crt_client2_static').value = '<% nvram_clean_get("vpn_crt_client2_static"); %>';", 300);
-			setTimeout("document.getElementById('edit_vpn_crt_client2_ca').value = '<% nvram_clean_get("vpn_crt_client2_ca"); %>';", 300);
-			setTimeout("document.getElementById('edit_vpn_crt_client2_crt').value = '<% nvram_clean_get("vpn_crt_client2_crt"); %>';", 300);
-			setTimeout("document.getElementById('edit_vpn_crt_client2_key').value = '<% nvram_clean_get("vpn_crt_client2_key"); %>';", 300);
-		}
-	}
-
-	setTimeout("openvpn_decodeKeys(1);", 400);
+function cancel_Key_panel(){
+	this.FromObject ="0";
+	$("#tlsKey_panel").fadeOut(300);
+	setTimeout("openvpn_restoreKeys();", 400);
 }
 
-function save_keys(auth){
-	if((auth == 'tls') || (auth == "secret")){
-		if (openvpn_unit == "1") {
-			document.form.vpn_crt_client1_static.value = document.getElementById('edit_vpn_crt_client1_static').value;
-			document.form.vpn_crt_client1_ca.value = document.getElementById('edit_vpn_crt_client1_ca').value;
-			document.form.vpn_crt_client1_crt.value = document.getElementById('edit_vpn_crt_client1_crt').value;
-			document.form.vpn_crt_client1_key.value = document.getElementById('edit_vpn_crt_client1_key').value;
-		} else {
-			document.form.vpn_crt_client2_static.value = document.getElementById('edit_vpn_crt_client2_static').value;
-			document.form.vpn_crt_client2_ca.value = document.getElementById('edit_vpn_crt_client2_ca').value;
-			document.form.vpn_crt_client2_crt.value = document.getElementById('edit_vpn_crt_client2_crt').value;
-			document.form.vpn_crt_client2_key.value = document.getElementById('edit_vpn_crt_client2_key').value;
-		}
-		cancel_Key_panel('tls');
+function openvpn_restoreKeys() {
+	if (openvpn_unit == "1") {
+		document.getElementById("edit_vpn_crt_client1_ca").value = client1_ca_bak;
+		document.getElementById("edit_vpn_crt_client1_crt").value = client1_crt_bak;
+		document.getElementById("edit_vpn_crt_client1_key").value = client1_key_bak;
+		document.getElementById("edit_vpn_crt_client1_static").value = client1_static_bak;
+       } else {
+		document.getElementById("edit_vpn_crt_client1_ca").value = client1_ca_bak;
+		document.getElementById("edit_vpn_crt_client1_crt").value = client1_crt_bak;
+		document.getElementById("edit_vpn_crt_client1_key").value = client1_key_bak;
+		document.getElementById("edit_vpn_crt_client1_static").value = client1_static_bak;
+       }
+}
+
+function save_keys(){
+	if (openvpn_unit == "1") {
+		document.form.vpn_crt_client1_static.value = document.getElementById('edit_vpn_crt_client1_static').value;
+		document.form.vpn_crt_client1_ca.value = document.getElementById('edit_vpn_crt_client1_ca').value;
+		document.form.vpn_crt_client1_crt.value = document.getElementById('edit_vpn_crt_client1_crt').value;
+		document.form.vpn_crt_client1_key.value = document.getElementById('edit_vpn_crt_client1_key').value;
+	} else {
+		document.form.vpn_crt_client2_static.value = document.getElementById('edit_vpn_crt_client2_static').value;
+		document.form.vpn_crt_client2_ca.value = document.getElementById('edit_vpn_crt_client2_ca').value;
+		document.form.vpn_crt_client2_crt.value = document.getElementById('edit_vpn_crt_client2_crt').value;
+		document.form.vpn_crt_client2_key.value = document.getElementById('edit_vpn_crt_client2_key').value;
 	}
+	this.FromObject ="0";
+	$("#tlsKey_panel").fadeOut(300);
 }
 
 function cal_panel_block(){
@@ -363,7 +352,7 @@ function cal_panel_block(){
 
 	}
 
-	$("tlsKey_panel").style.marginLeft = blockmarginLeft+"px";
+	document.getElementById("tlsKey_panel").style.marginLeft = blockmarginLeft+"px";
 }
 
 
@@ -390,14 +379,14 @@ function applyRule(){
 
 	document.form.vpn_client_if.value = document.form.vpn_client_if_x.value;
 
-	var rule_num = $('clientlist_table').rows.length;
-	var item_num = $('clientlist_table').rows[0].cells.length;
+	var rule_num = document.getElementById('clientlist_table').rows.length;
+	var item_num = document.getElementById('clientlist_table').rows[0].cells.length;
 	var tmp_value = "";
 
 	for(i=0; i<rule_num; i++){
 		tmp_value += "<";
 		for(j=0; j<item_num-1; j++){
-			tmp_value += $('clientlist_table').rows[i].cells[j].innerHTML;
+			tmp_value += document.getElementById('clientlist_table').rows[i].cells[j].innerHTML;
 			if(j != item_num-2)
 				tmp_value += ">";
 		}
@@ -444,7 +433,7 @@ var vpn_upload_state = "init";
 function ovpnFileChecker(){
 	document.getElementById("importOvpnFile").innerHTML = "<#Main_alert_proceeding_desc3#>";
 
-	$j.ajax({
+	$.ajax({
 			url: '/ajax_openvpn_server.asp',
 			dataType: 'script',
 			timeout: 1500,
@@ -500,7 +489,7 @@ function showclientlist(){
 	}
 
   code +='</table>';
-	$("clientlist_Block").innerHTML = code;
+	document.getElementById("clientlist_Block").innerHTML = code;
 }
 
 function addRow(obj, head){
@@ -514,8 +503,8 @@ function addRow(obj, head){
 }
 
 function addRow_Group(upper){
-	var rule_num = $('clientlist_table').rows.length;
-	var item_num = $('clientlist_table').rows[0].cells.length;
+	var rule_num = document.getElementById('clientlist_table').rows.length;
+	var item_num = document.getElementById('clientlist_table').rows[0].cells.length;
 	if(rule_num >= upper){
 		alert("<#JS_itemlimit1#> " + upper + " <#JS_itemlimit2#>");
 		return false;
@@ -541,8 +530,8 @@ function addRow_Group(upper){
 
 	if(item_num >=2){
 		for(i=0; i<rule_num; i++){
-				if(document.form.clientlist_ipAddr.value.toLowerCase() == $('clientlist_table').rows[i].cells[1].innerHTML.toLowerCase() &&
-				   document.form.clientlist_dstipAddr.value.toLowerCase() == $('clientlist_table').rows[i].cells[2].innerHTML.toLowerCase()){
+				if(document.form.clientlist_ipAddr.value.toLowerCase() == document.getElementById('clientlist_table').rows[i].cells[1].innerHTML.toLowerCase() &&
+				   document.form.clientlist_dstipAddr.value.toLowerCase() == document.getElementById('clientlist_table').rows[i].cells[2].innerHTML.toLowerCase()){
 					alert("<#JS_duplicate#>");
 					document.form.clientlist_ipAddr.focus();
 					document.form.clientlist_ipAddr.select();
@@ -561,18 +550,18 @@ function addRow_Group(upper){
 
 function del_Row(r){
 	var i=r.parentNode.parentNode.rowIndex;
-	$('clientlist_table').deleteRow(i);
+	document.getElementById('clientlist_table').deleteRow(i);
 
 	var clientlist_value = "";
-	for(k=0; k<$('clientlist_table').rows.length; k++){
+	for(k=0; k<document.getElementById('clientlist_table').rows.length; k++){
 		clientlist_value += "&#60";
-		clientlist_value += $('clientlist_table').rows[k].cells[0].innerHTML;
+		clientlist_value += document.getElementById('clientlist_table').rows[k].cells[0].innerHTML;
 		clientlist_value += "&#62";
-		clientlist_value += $('clientlist_table').rows[k].cells[1].innerHTML;
+		clientlist_value += document.getElementById('clientlist_table').rows[k].cells[1].innerHTML;
 		clientlist_value += "&#62";
-		clientlist_value += $('clientlist_table').rows[k].cells[2].innerHTML;
+		clientlist_value += document.getElementById('clientlist_table').rows[k].cells[2].innerHTML;
 		clientlist_value += "&#62";
-		clientlist_value += $('clientlist_table').rows[k].cells[3].innerHTML;
+		clientlist_value += document.getElementById('clientlist_table').rows[k].cells[3].innerHTML;
 	}
 
 	clientlist_array = clientlist_value;
@@ -606,7 +595,7 @@ function showLANIPList(){
 		}
 	}
 
-	$("ClientList_Block_PC").innerHTML = htmlCode;
+	document.getElementById("ClientList_Block_PC").innerHTML = htmlCode;
 }
 
 function setClientIP(_name, _ipaddr){
@@ -619,15 +608,15 @@ function setClientIP(_name, _ipaddr){
 var over_var = 0;
 var isMenuopen = 0;
 function hideClients_Block(){
-	$("pull_arrow").src = "/images/arrow-down.gif";
-	$('ClientList_Block_PC').style.display='none';
+	document.getElementById("pull_arrow").src = "/images/arrow-down.gif";
+	document.getElementById('ClientList_Block_PC').style.display='none';
 	isMenuopen = 0;
 }
 
 function pullLANIPList(obj){
 	if(isMenuopen == 0){
 		obj.src = "/images/arrow-top.gif"
-		$("ClientList_Block_PC").style.display = 'block';
+		document.getElementById("ClientList_Block_PC").style.display = 'block';
 		document.form.clientlist_deviceName.focus();
 		isMenuopen = 1;
 	}
@@ -677,29 +666,29 @@ function validate_ipcidr(obj){
 										<tr>
 											<th>Static Key</th>
 											<td>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_static" name="edit_vpn_crt_client1_static" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client1_static"); %></textarea>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_static" name="edit_vpn_crt_client2_static" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client2_static"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_static" name="edit_vpn_crt_client1_static" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client1_static"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_static" name="edit_vpn_crt_client2_static" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client2_static"); %></textarea>
 											</td>
 										</tr>
 										<tr>
 											<th id="manualCa">Certificate Authority</th>
 											<td>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_ca" name="edit_vpn_crt_client1_ca" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client1_ca"); %></textarea>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_ca" name="edit_vpn_crt_client2_ca" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client2_ca"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_ca" name="edit_vpn_crt_client1_ca" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client1_ca"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_ca" name="edit_vpn_crt_client2_ca" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client2_ca"); %></textarea>
 											</td>
 										</tr>
 										<tr>
 											<th id="manualCert">Client Certificate</th>
 											<td>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_crt" name="edit_vpn_crt_client1_crt" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client1_crt"); %></textarea>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_crt" name="edit_vpn_crt_client2_crt" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client2_crt"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_crt" name="edit_vpn_crt_client1_crt" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client1_crt"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_crt" name="edit_vpn_crt_client2_crt" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client2_crt"); %></textarea>
 											</td>
 										</tr>
 										<tr>
 											<th id="manualKey">Client Key</th>
 											<td>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_key" name="edit_vpn_crt_client1_key" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client1_key"); %></textarea>
-												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_key" name="edit_vpn_crt_client2_key" cols="65" maxlength="3499"><% nvram_clean_get("vpn_crt_client2_key"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client1_key" name="edit_vpn_crt_client1_key" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client1_key"); %></textarea>
+												<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_client2_key" name="edit_vpn_crt_client2_key" cols="65" maxlength="3499"><% show_file_content("/jffs/openvpn/vpn_crt_client2_key"); %></textarea>
 											</td>
 										</tr>
 									</table>
@@ -708,8 +697,8 @@ function validate_ipcidr(obj){
 						</tbody>						
 	  				</table>
 					<div style="margin-top:5px;width:100%;text-align:center;">
-						<input class="button_gen" type="button" onclick="cancel_Key_panel('tls');" value="<#CTL_Cancel#>">
-						<input class="button_gen" type="button" onclick="save_keys('tls');" value="<#CTL_onlysave#>">	
+						<input class="button_gen" type="button" onclick="cancel_Key_panel();" value="<#CTL_Cancel#>">
+						<input class="button_gen" type="button" onclick="save_keys();" value="<#CTL_onlysave#>">	
 					</div>					
 				</td>
 			</tr>
@@ -730,7 +719,7 @@ function validate_ipcidr(obj){
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_script" value="">
-<input type="hidden" name="action_wait" value="5">
+<input type="hidden" name="action_wait" value="10">
 <input type="hidden" name="first_time" value="">
 <input type="hidden" name="SystemCmd" value="">
 <input type="hidden" name="preferred_lang" id="preferred_lang" value="<% nvram_get("preferred_lang"); %>">
@@ -798,7 +787,7 @@ function validate_ipcidr(obj){
 							<div class="left" style="width:94px; float:left; cursor:pointer;" id="radio_service_enable"></div>
 							<script type="text/javascript">
 
-								$j('#radio_service_enable').iphoneSwitch(service_state,
+								$('#radio_service_enable').iphoneSwitch(service_state,
 									 function() {
 										document.form.action_script.value = "start_vpnclient" + openvpn_unit;
 										parent.showLoading();
