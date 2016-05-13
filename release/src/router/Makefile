@@ -201,8 +201,8 @@ SEP=echo "\033[41;1m   $@   \033[0m"
 obj-$(RTCONFIG_QTN) += libqcsapi_client
 obj-$(RTCONFIG_DMALLOC) += dmalloc
 
-#obj-$(RTCONFIG_DHDAP) += pciefd dhd
-#obj-$(RTCONFIG_DHDAP) += dhd
+obj-$(RTCONFIG_DHDAP) += pciefd dhd
+obj-$(RTCONFIG_DHDAP) += dhd
 obj-y += busybox
 obj-y += shared
 obj-y += nvram$(BCMEX)
@@ -312,7 +312,7 @@ else
 #obj-y += et
 obj-y += utils$(BCMEX)$(EX7)
 obj-$(RTCONFIG_EMF) += emf$(BCMEX)$(DPI)$(EX7)
-obj-$(RTCONFIG_EMF) += igs
+obj-$(RTCONFIG_EMF) += igs$(BCMEX)$(DPI)$(EX7)
 ifneq ($(RTCONFIG_BCM_794),y)	# do not build wl/dhd since not ready
 obj-y += wlconf$(BCMEX)$(EX7)
 obj-y += nas$(BCMEX)$(EX7)
@@ -350,7 +350,7 @@ obj-$(RTCONFIG_USB_MODEM) += comgt-0.32
 obj-$(RTCONFIG_USB_MODEM) += uqmi
 
 ifneq ($(or $(findstring linux-2.6.36.x,$(LINUXDIR)),$(findstring linux-2.6.36,$(LINUXDIR)),$(findstring linux-3.x,$(LINUXDIR)),$(findstring linux-3.3.x,$(LINUXDIR))),)
-ifeq ($(or $(RTN65U),$(RTAC55U),$RTAC55UHP)),y)
+ifeq ($(or $(RTN65U),$(RTAC55U),$(RTAC55UHP)),y)
 obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch-1.2.3
 else
 obj-$(RTCONFIG_USB_MODEM) += usb-modeswitch-2.2.0
@@ -1495,6 +1495,7 @@ pciefd-install :
 
 ifeq ($(RTCONFIG_DHDAP),y)
 dhd:
+	@true
 ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
 	$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_DHD)/dhd/exe
 endif
@@ -1617,7 +1618,11 @@ iptables-1.4.x-clean:
 upnp: nvram$(BCMEX) shared iptables
 
 miniupnpd/config.h:
+ifeq ($(RTCONFIG_IGD2),y)
+	cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg $(if $(RTCONFIG_IPV6),--ipv6,) --igd2
+else
 	cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg
+endif
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd/config.h
 	@$(SEP)
@@ -2881,17 +2886,17 @@ endif
 emf$(BCMEX)$(DPI)$(EX7)-clean:
 	-@$(MAKE) -C emf$(BCMEX)$(DPI)$(EX7)/emfconf clean
 
-igs:
+igs$(BCMEX)$(DPI)$(EX7):
 	$(MAKE) -C emf$(BCMEX)$(DPI)$(EX7)/igsconf CROSS=$(CROSS_COMPILE)
 
-igs-install:
+igs$(BCMEX)$(DPI)$(EX7)-install:
 ifeq ($(RTCONFIG_EMF),y)
 	install -d $(TARGETDIR)
-	$(MAKE) -C emf$(BCMEX)$(EX7)/igsconf CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install
+	$(MAKE) -C emf$(BCMEX)$(DPI)$(EX7)/igsconf CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install
 endif
 
-igs-clean:
-	-@$(MAKE) -C emf$(BCMEX)$(EX7)/igsconf clean
+igs$(BCMEX)$(DPI)$(EX7)-clean:
+	-@$(MAKE) -C emf$(BCMEX)$(DPI)$(EX7)/igsconf clean
 
 ebtables: kernel_header dummy
 	$(MAKE) -C ebtables CC=$(CC) LD=$(LD) \
@@ -3136,25 +3141,6 @@ lighttpd-1.4.29-install: lighttpd-1.4.29
 lighttpd-1.4.29-clean:
 	-@$(MAKE) -C lighttpd-1.4.29 clean
 	@rm -f lighttpd-1.4.29/stamp-h1
-
-pcre-8.12/stamp-h1:
-	cd pcre-8.12 && \
-	CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	./$(CONFIGURE) --prefix=/usr --disable-dependency-tracking
-	touch $@
-	[ -d pcre-8.12/m4 ] || mkdir pcre-8.12/m4
-
-pcre-8.12: pcre-8.12/stamp-h1
-	@$(MAKE) -C pcre-8.12 $(PARALLEL_BUILD)
-
-pcre-8.12-install: pcre-8.12
-	@$(SEP)
-	install -D pcre-8.12/.libs/libpcre.so.0.0.1 $(INSTALLDIR)/pcre-8.12/usr/lib/libpcre.so.0
-	$(STRIP) -s $(INSTALLDIR)/pcre-8.12/usr/lib/libpcre.so.0
-
-pcre-8.12-clean:
-	-@$(MAKE) -C pcre-8.12 clean
-	@rm -f pcre-8.12/stamp-h1
 
 pcre-8.31/stamp-h1:
 	cd pcre-8.31 && \

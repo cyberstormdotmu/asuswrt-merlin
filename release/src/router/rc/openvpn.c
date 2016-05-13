@@ -61,12 +61,21 @@ void start_vpnclient(int clientNum)
 	int pid;
 	int userauth, useronly;
 	int taskset_ret;
+	int i;
 
 	sprintf(&buffer[0], "start_vpnclient%d", clientNum);
 	if (getpid() != 1) {
 		notify_rc(&buffer[0]);
 		return;
 	}
+
+        for ( i = 1; i < 4; i++ ) {
+		if (!nvram_get_int("ntp_ready")) {
+			sleep(i*i);
+		} else {
+			i = 4;
+		}
+        }
 
 	vpnlog(VPN_LOG_INFO,"VPN GUI client backend starting...");
 
@@ -550,12 +559,13 @@ void stop_vpnclient(int clientNum)
 	{
 		vpnlog(VPN_LOG_EXTRA,"Removing generated files.");
 		// Delete all files for this client
-		sprintf(&buffer[0], "rm -rf /etc/openvpn/client%d /etc/openvpn/fw/client%d-fw.sh /etc/openvpn/vpnclient%d",clientNum,clientNum,clientNum);
+		sprintf(&buffer[0], "rm -rf /etc/openvpn/client%d /etc/openvpn/fw/client%d-fw.sh /etc/openvpn/vpnclient%d /etc/openvpn/dns/client%d.resolv",clientNum,clientNum,clientNum,clientNum);
 		for (argv[argc=0] = strtok(&buffer[0], " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 		_eval(argv, NULL, 0, NULL);
 
 		// Attempt to remove directories.  Will fail if not empty
 		rmdir("/etc/openvpn/fw");
+		rmdir("/etc/openvpn/dns");
 		rmdir("/etc/openvpn");
 		vpnlog(VPN_LOG_EXTRA,"Done removing generated files.");
 	}
@@ -570,6 +580,9 @@ void stop_vpnclient(int clientNum)
 	nvram_set(&buffer[0], "0");
 	sprintf(&buffer[0], "vpn_client%d_errno", clientNum);
 	nvram_set(&buffer[0], "0");
+
+	update_resolvconf();
+	start_dnsmasq();
 
 	vpnlog(VPN_LOG_INFO,"VPN GUI client backend stopped.");
 }
@@ -592,11 +605,20 @@ void start_vpnserver(int serverNum)
 	char nv1[32], nv2[32], nv3[32], fpath[128];
 	int valid = 0;
 	int userauth = 0, useronly = 0;
+	int i;
 
 	sprintf(&buffer[0], "start_vpnserver%d", serverNum);
 	if (getpid() != 1) {
 		notify_rc(&buffer[0]);
 		return;
+	}
+
+	for ( i = 1; i < 4; i++ ) {
+		if (!nvram_get_int("ntp_ready")) {
+			sleep(i*i);
+		} else {
+			i = 4;
+		}
 	}
 
 	vpnlog(VPN_LOG_INFO,"VPN GUI server backend starting...");
@@ -707,6 +729,7 @@ void start_vpnserver(int serverNum)
 	chmod(&buffer[0], S_IRUSR|S_IWUSR);
 	fprintf(fp, "# Automatically generated configuration\n");
 	fprintf(fp, "daemon\n");
+	fprintf(fp, "topology subnet\n");
 
 	sprintf(&buffer[0], "/etc/openvpn/server%d/client.ovpn", serverNum);
 	fp_client = fopen(&buffer[0], "w");
@@ -783,6 +806,12 @@ void start_vpnserver(int serverNum)
 	//port
 	sprintf(&buffer[0], "vpn_server%d_port", serverNum);
 	fprintf(fp, "port %d\n", nvram_get_int(&buffer[0]));
+
+	// Don't explicitely set socket buffer size
+	sprintf(&buffer[0], "vpn_server%d_sockbuf", serverNum);
+	if (nvram_match(&buffer[0], "1")) {
+		fprintf(fp, "rcvbuf 0\nsndbuf 0\n");
+	}
 
 	if(nvram_get_int("ddns_enable_x"))
 		fprintf(fp_client, "remote %s %s\n", nvram_safe_get("ddns_hostname_x"), nvram_safe_get(&buffer[0]));
@@ -1486,6 +1515,10 @@ void start_vpn_eas()
 		start_vpnserver(nums[i]);
 	}
 
+	// Setup client routing in case some are set to be blocked when tunnel is down
+	update_vpnrouting(1);
+	update_vpnrouting(2);
+
 	// Parse and start clients
 	strlcpy(&buffer[0], nvram_safe_get("vpn_clientx_eas"), sizeof(buffer));
 	if ( strlen(&buffer[0]) != 0 ) vpnlog(VPN_LOG_INFO, "Starting clients (eas): %s", &buffer[0]);
@@ -1748,7 +1781,7 @@ int check_ovpn_client_enabled(int unit){
 }
 
 void update_vpnrouting(int unit){
-	char tmp[64];
+	char tmp[56];
 	snprintf(tmp, sizeof (tmp), "dev=tun1%d script_type=rmupdate /usr/sbin/vpnrouting.sh", unit);
 	system(tmp);
 }
