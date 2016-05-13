@@ -288,7 +288,7 @@ bound(void)
 	stop_zcip(ifunit);
 
 	changed += nvram_set_env(strcat_r(prefix, "ipaddr", tmp), "ip");
-#if defined(RTCONFIG_USB_MODEM) && defined(RT4GAC55U)
+#if defined(RTCONFIG_USB_MODEM) && defined(RTCONFIG_INTERNAL_GOBI)
 	if (get_dualwan_by_unit(ifunit) == WANS_DUALWAN_IF_USB &&
 	    nvram_match("usb_modem_act_type", "gobi")) {
 		changed += nvram_set_check(strcat_r(prefix, "netmask", tmp), "255.255.255.255");
@@ -456,7 +456,7 @@ renew(void)
 	if ((value = getenv("ip")) == NULL ||
 	    !nvram_match(strcat_r(prefix, "ipaddr", tmp), trim_r(value)))
 		return bound();
-#if defined(RTCONFIG_USB_MODEM) && defined(RT4GAC55U)
+#if defined(RTCONFIG_USB_MODEM) && defined(RTCONFIG_INTERNAL_GOBI)
 	if (get_dualwan_by_unit(ifunit) == WANS_DUALWAN_IF_USB &&
 	    nvram_match("usb_modem_act_type", "gobi")) {
 		if (!nvram_match(strcat_r(prefix, "netmask", tmp), "255.255.255.255"))
@@ -885,9 +885,9 @@ _dprintf("%s: IFUP.\n", __FUNCTION__);
 	else
 #endif
 	if(nvram_match("lan_proto", "static"))
-		ifconfig(lan_ifname, IFUP, nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"));
+		ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"));
 	else
-		ifconfig(lan_ifname, IFUP, nvram_default_get("lan_ipaddr"), nvram_default_get("lan_netmask"));
+		ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_default_get("lan_ipaddr"), nvram_default_get("lan_netmask"));
 
 	expires_lan(lan_ifname, 0);
 
@@ -969,7 +969,7 @@ _dprintf("%s: IFUP.\n", __FUNCTION__);
 	}
 #endif
 
-	ifconfig(lan_ifname, IFUP, nvram_safe_get("lan_ipaddr"),
+	ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_safe_get("lan_ipaddr"),
 		nvram_safe_get("lan_netmask"));
 
 	lan_up(lan_ifname);

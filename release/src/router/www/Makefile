@@ -322,6 +322,7 @@ ifneq ($(RTCONFIG_BWDPI),y)
 	rm -rf $(INSTALLDIR)/www/AiProtection_HomeProtection.asp
 	rm -rf $(INSTALLDIR)/www/AiProtection_WebProtector.asp
 	rm -rf $(INSTALLDIR)/www/images/New_ui/QoS_quick
+	rm -rf $(INSTALLDIR)/www/css/icon.css
 ifneq ($(RTCONFIG_PARENTALCTRL),y)
 	rm -rf $(INSTALLDIR)/www/blocking.asp
 endif
@@ -412,14 +413,17 @@ endif
 
 ifneq ($(BUILD_NAME),$(filter $(BUILD_NAME), RT-AC88U RT-AC3100 RT-AC5300 RT-AC3200))
 	rm -rf $(INSTALLDIR)/www/QIS_wizard_m.htm
-	rm -rf $(INSTALLDIR)/www/css
+	rm -rf $(INSTALLDIR)/www/css/effect.css
 	rm -rf $(INSTALLDIR)/www/qis_m
 	rm -rf $(INSTALLDIR)/www/images/qis/icon_MAC_clone.svg
-	rm -rf $(INSTALLDIR)/www/images/qis/loading.gif
 	rm -rf $(INSTALLDIR)/www/images/qis/logo.png
+ifneq ($(BUILD_NAME),$(filter $(BUILD_NAME), RP-AC66 RP-AC68U))
+	rm -rf $(INSTALLDIR)/www/css/icon-qis.css
+	rm -rf $(INSTALLDIR)/www/images/qis/loading.gif
 	rm -rf $(INSTALLDIR)/www/images/qis/mainimage_img4.png
 	rm -rf $(INSTALLDIR)/www/images/qis/pattern3-3_10_A15.png
 	rm -rf $(INSTALLDIR)/www/images/qis/pattern3_05_4.png
+endif
 endif
 
 ifneq ($(RTCONFIG_DISK_MONITOR), y)
@@ -429,8 +433,31 @@ endif
 
 ifneq ($(RTCONFIG_WTFAST), y)
 	rm -rf $(INSTALLDIR)/www/Advanced_WTFast_Content.asp
+	rm -rf $(INSTALLDIR)/www/GameBoost.asp
 	rm -rf $(INSTALLDIR)/www/js/fire.js
 	rm -rf $(INSTALLDIR)/www/images/fire.jpg
-	rm -rf $(INSTALLDIR)/www/images/wtfast_bg.jpg
+	rm -rf $(INSTALLDIR)/www/images/wtfast_bg.png
 	rm -rf $(INSTALLDIR)/www/images/wtfast_logo.png
+	rm -rf $(INSTALLDIR)/www/images/wtfast_device.svg
+	rm -rf $(INSTALLDIR)/www/images/wtfast_back.svg
+	rm -rf $(INSTALLDIR)/www/images/wtfast_back_hover.svg
+	rm -rf $(INSTALLDIR)/www/images/wtfast_device.svg
+	rm -rf $(INSTALLDIR)/www/images/wtfast_point.gif
+	rm -rf $(INSTALLDIR)/www/images/GameBoost_AiProtection.png
+	rm -rf $(INSTALLDIR)/www/images/GameBoost_QoS.png
+	rm -rf $(INSTALLDIR)/www/images/GameBoost_WTFast.png
+	rm -rf $(INSTALLDIR)/www/images/New_ui/game.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/mainimage_img_Game.png
+	rm -rf $(INSTALLDIR)/www/images/New_ui/pattern3_05.png
+	rm -rf $(INSTALLDIR)/www/images/New_ui/pattern3_10.png
+	rm -rf $(INSTALLDIR)/www/images/New_ui/add.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/add_hover.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/delete.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/delete_hover.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/disable.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/enable.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/logout.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/logout_hover.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/upgrade.svg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/upgrade_hover.svg	
 endif

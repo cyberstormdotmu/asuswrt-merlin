@@ -155,8 +155,10 @@ function show_etherstate(){
 
 	if (based_modelid == "RT-AC88U")
 		coldisplay = "display:none;";
-	else
+	else {
 		coldisplay = "";
+		genClientList();
+	}
 
 	var code = '<table cellpadding="0" cellspacing="0" width="100%"><tr><th style="width:15%;">Port</th><th style="width:15%;' + coldisplay + '">VLAN</th><th style="width:25%;">Link State</th>';
 	code += '<th style="width:45%;' + coldisplay + '">Last Device Seen</th></tr>';
@@ -204,7 +206,7 @@ function show_etherstate(){
 				overlib_str = "<p><#MAC_Address#>:</p>" + devicemac;
 
 				if (clientList[devicemac])
-					hostname = clientList[devicemac].name;
+					hostname = (clientList[devicemac].nickName == "") ? clientList[devicemac].hostname : clientList[devicemac].nickName;
 
 				if ((hostname != "") && (typeof hostname !== 'undefined')) {
 					devicename = '<span class="ClientName" onclick="oui_query(\'' + devicemac +'\');;overlib_str_tmp=\''+ overlib_str +'\';return overlib(\''+ overlib_str +'\');" onmouseout="nd();" style="cursor:pointer; text-decoration:underline;">'+ hostname +'</span>';
@@ -216,7 +218,7 @@ function show_etherstate(){
 
 			if (tmpPort == "8") {		// CPU Port
 				continue;
-			} else if ((based_modelid == "RT-AC56U") || (based_modelid == "RT-AC56S") || (based_modelid == "RT-AC88U")) {
+			} else if ((based_modelid == "RT-AC56U") || (based_modelid == "RT-AC56S") || (based_modelid == "RT-AC88U") || (based_modelid == "RT-AC3100")) {
 				tmpPort++;		// Port starts at 0
 				if (tmpPort == "5") tmpPort = 0;	// Last port is WAN
 			} else if (based_modelid == "RT-AC87U") {
@@ -231,7 +233,9 @@ function show_etherstate(){
 				port = "WAN";
 			} else {
 				if ((based_modelid == "RT-N16") || (based_modelid == "RT-AC87U")
-				    || (based_modelid == "RT-AC3200") || (based_modelid == "RT-AC88U"))  tmpPort = 5 - tmpPort;
+				    || (based_modelid == "RT-AC3200") || (based_modelid == "RT-AC88U") 
+				    || (based_modelid == "RT-AC3100"))  tmpPort = 5 - tmpPort;
+
 				port = "LAN "+tmpPort;
 			}
 			entry = '<tr><td>' + port + '</td><td style="' + coldisplay +'">' + (line[7] & 0xFFF) + '</td><td><span>' + state2 + '</span></td>';

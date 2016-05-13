@@ -61,6 +61,12 @@ static void ntp_service()
 #ifdef RTCONFIG_DISK_MONITOR
 		notify_rc("restart_diskmon");
 #endif
+
+#ifdef RTCONFIG_DNSSEC
+		if (nvram_match("dnssec_enable", "1")) {
+			reload_dnsmasq();
+		}
+#endif
 	}
 }
 
@@ -157,6 +163,7 @@ int ntp_main(int argc, char *argv[])
 		if (sig_cur == SIGTSTP)
 			;
 		else if (nvram_get_int("sw_mode") == SW_MODE_ROUTER &&
+			!nvram_match("link_internet", "1") &&
 			!nvram_match("link_internet", "2"))
 		{
 			alarm(SECONDS_TO_WAIT);
@@ -170,7 +177,7 @@ int ntp_main(int argc, char *argv[])
 			stop_ntpc();
 
 			nvram_set("ntp_server_tried", server);
-			if (nvram_match("ntp_ready", "0"))
+			if (nvram_match("ntp_ready", "0") || nvram_match("ntp_debug", "1"))
 				logmessage("ntp", "start NTP update");
 			_eval(args, NULL, 0, &pid);
 			sleep(SECONDS_TO_WAIT);

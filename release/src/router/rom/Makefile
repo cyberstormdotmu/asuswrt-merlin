@@ -131,6 +131,12 @@ else
 	rm -f $(INSTALLDIR)/rom/etc/openssl.cnf
 endif
 
+ifeq ($(RTCONFIG_DNSSEC),y)
+	cp rom/etc/dnssec-trust-anchors $(INSTALLDIR)/rom/etc/dnssec-trust-anchors
+else
+	rm -rf $(INSTALLDIR)/rom/etc/dnssec-trust-anchors
+endif
+
 ifeq ($(RTCONFIG_DUALWAN),y)
 	cp -rf rom/etc/static_routes $(INSTALLDIR)/rom/etc/
 else
@@ -153,7 +159,7 @@ endif
 
 ifeq ($(RTCONFIG_MEDIA_SERVER),y)
 	mkdir -p $(INSTALLDIR)/rom/dlna
-ifeq ($(DSLAC68U)$(RT4GAC55U),y)
+ifeq ($(RTCONFIG_INTERNAL_GOBI),y)
 	cp -rf dlna/icon_sm.rt-ac68u.jpg $(INSTALLDIR)/rom/dlna/icon_sm.jpg
 	cp -rf dlna/icon_sm.rt-ac68u.png $(INSTALLDIR)/rom/dlna/icon_sm.png
 	cp -rf dlna/icon_lrg.rt-ac68u.jpg $(INSTALLDIR)/rom/dlna/icon_lrg.jpg

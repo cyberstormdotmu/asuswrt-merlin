@@ -144,6 +144,7 @@ var originData = {
 	time_scheduling_devicename: decodeURIComponent('<% nvram_char_to_ascii("", "MULTIFILTER_DEVICENAME"); %>').replace(/&#62/g, ">").replace(/&#60/g, "<").split('>'),
 	time_scheduling_daytime: decodeURIComponent('<% nvram_char_to_ascii("", "MULTIFILTER_MACFILTER_DAYTIME"); %>').replace(/&#62/g, ">").replace(/&#60/g, "<").split('>'),
 	current_time: '<% uptime(); %>',
+	wtf_rulelist: decodeURIComponent('<% nvram_char_to_ascii("", "wtf_rulelist"); %>').replace(/&#62/g, ">").replace(/&#60/g, "<").split('<'),
 	init: true
 }
 
@@ -155,6 +156,7 @@ var totalClientNum = {
 }
 
 var setClientAttr = function(){
+	this.hostname = "";
 	this.type = "";
 	this.defaultType = "0";
 	this.name = "";
@@ -189,6 +191,7 @@ var setClientAttr = function(){
 	this.dpiDevice = "";
 	this.internetMode = "allow";
 	this.internetState = 1; // 1:Allow Internet access, 0:Block Internet access
+	this.wtfast = 0;
 }
 
 var ouiClientList = cookie.get("ouiClientList");
@@ -275,7 +278,7 @@ function genClientList(){
 		var thisClient = originData.asusDevice[i].split(">");
 		var thisClientMacAddr = (typeof thisClient[3] == "undefined") ? false : thisClient[3].toUpperCase();
 
-		if(!thisClientMacAddr || thisClient[2] == '<% nvram_get("lan_ipaddr"); %>'){
+		if(!thisClientMacAddr || thisClient.length != 8 || thisClient[2] == '<% nvram_get("lan_ipaddr"); %>'){
 			continue;
 		}
 
@@ -314,7 +317,7 @@ function genClientList(){
 		var thisClient = originData.fromNetworkmapd[i].split(">");
 		var thisClientMacAddr = (typeof thisClient[3] == "undefined") ? false : thisClient[3].toUpperCase();
 
-		if(!thisClientMacAddr){
+		if(!thisClientMacAddr || thisClient.length != 8){
 			continue;
 		}
 
@@ -459,7 +462,7 @@ function genClientList(){
 		var thisClient = originData.customList[i].split(">");
 		var thisClientMacAddr = (typeof thisClient[1] == "undefined") ? false : thisClient[1].toUpperCase();
 
-		if(!thisClientMacAddr){
+		if(!thisClientMacAddr || thisClient.length != 6){
 			continue;
 		}
 
@@ -492,7 +495,7 @@ function genClientList(){
 		thisClient[0].toUpperCase().substring(2, 4) + ":" + thisClient[0].toUpperCase().substring(4, 6) + ":" + thisClient[0].toUpperCase().substring(6, 8) + ":" + 
 		thisClient[0].toUpperCase().substring(8, 10) + ":" + thisClient[0].toUpperCase().substring(10, 12);
 
-		if(!thisClientMacAddr) {
+		if(!thisClientMacAddr || thisClient.length != 8) {
 			continue;
 		}
 
@@ -610,6 +613,7 @@ function genClientList(){
 	for(var i = 0; i < leaseArray.mac.length; i += 1) {
 		if(typeof clientList[leaseArray.mac[i]] != "undefined"){
 			clientList[leaseArray.mac[i]].ipMethod = "DHCP";
+			clientList[leaseArray.mac[i]].hostname = leaseArray.hostname[i];
 		}
 	}
 
@@ -623,11 +627,27 @@ function genClientList(){
 			continue;
 		}
 
+		if (thisClient[2] != "")
+			clientList[thisClientMacAddr].hostname = thisClient[2];
+
 		if(typeof clientList[thisClientMacAddr] != "undefined"){
 			if(clientList[thisClientMacAddr].ipMethod == "DHCP") {
 				if(clientList[thisClientMacAddr].ip == thisClient[1] || clientList[thisClientMacAddr].ip == "offline")
 					clientList[thisClientMacAddr].ipMethod = "Manual";
 			}
+		}
+	}
+
+	for(var i = 0; i < originData.wtf_rulelist.length; i += 1) {
+		var thisClient = originData.wtf_rulelist[i].split(">");
+		var thisClientMacAddr = (typeof thisClient[1] == "undefined") ? false : thisClient[1].toUpperCase();
+
+		if(!thisClientMacAddr || typeof clientList[thisClientMacAddr] == "undefined") {
+			continue;
+		}
+
+		if(typeof clientList[thisClientMacAddr] != "undefined") {
+			clientList[thisClientMacAddr].wtfast = parseInt(thisClient[0]);
 		}
 	}
 
@@ -703,11 +723,11 @@ function oui_query_set_cookie(mac) {
 	var tab = new Array();
 	tab = mac.split(mac.substr(2,1));
 	$.ajax({
-	    url: 'http://standards.ieee.org/cgi-bin/ouisearch?'+ tab[0] + '-' + tab[1] + '-' + tab[2],
+	    url: 'https://services11.ieee.org/RST/standards-ra-web/rest/assignments/download/?registry=MA-L&format=html&text='+ tab[0] + tab[1] + tab[2],
 		type: 'GET',
 	    success: function(response) {
 	    	if(response.responseText.search("Sorry!") == -1) {
-				var retData = response.responseText.split("pre")[1].split("(hex)")[1].split(tab[0] + tab[1] + tab[2])[0].split("&lt;/");
+				var retData = response.responseText.split("pre")[1].split("(hex)")[1].split(tab[0] + tab[1] + tab[2])[0].split("\n");
 				if(ouiClientList == null) {
 					ouiClientList = "";
 				}
@@ -1615,7 +1635,7 @@ function oui_query_card(mac) {
 	var tab = new Array();
 	tab = mac.split(mac.substr(2,1));
 	$.ajax({
-		url: 'http://standards.ieee.org/cgi-bin/ouisearch?'+ tab[0] + '-' + tab[1] + '-' + tab[2],
+		url: 'https://services11.ieee.org/RST/standards-ra-web/rest/assignments/download/?registry=MA-L&format=html&text='+ tab[0] + tab[1] + tab[2],
 		type: 'GET',
 		success: function(response) {
 			if(document.getElementById("edit_client_block") == null) return true;
@@ -1624,7 +1644,8 @@ function oui_query_card(mac) {
 			}
 			else {
 				if(response.responseText.search("Sorry!") == -1) {
-					var retData = response.responseText.split("pre")[1].split("(hex)")[1].split(tab[0] + tab[1] + tab[2])[0].split("&lt;/");
+					var retData = response.responseText.split("pre")[1].split("(hex)")[1].split(tab[0] + tab[1] + tab[2])[0].split("\n");
+
 					document.getElementById("client_manufacturer_field").value = retData[0].trim();
 					document.getElementById("client_manufacturer_field").title = "";
 					if(retData[0].trim().length > 28) {
@@ -2736,7 +2757,7 @@ function oui_query(mac){
 	var tab = new Array();
 	tab = mac.split(mac.substr(2,1));
 	$.ajax({
-	    url: 'http://standards.ieee.org/cgi-bin/ouisearch?'+ tab[0] + '-' + tab[1] + '-' + tab[2],
+	    url: 'https://services11.ieee.org/RST/standards-ra-web/rest/assignments/download/?registry=MA-L&format=html&text='+ tab[0] + tab[1] + tab[2],
 		type: 'GET',
 	    success: function(response) {
 			if(overlib.isOut) return nd();
@@ -2745,7 +2766,8 @@ function oui_query(mac){
 			else
 				var overlibStrTmp = "<p><#MAC_Address#>:</p>" + mac.toUpperCase();
 			if(response.responseText.search("Sorry!") == -1) {
-				var retData = response.responseText.split("pre")[1].split("(base 16)")[1].replace("PROVINCE OF CHINA", "R.O.C").split("&lt;/");
+				var retData = response.responseText.split("pre")[1].split("(hex)")[1].split(tab[0] + tab[1] + tab[2])[0].split("\n");
+
 				overlibStrTmp += "<p><span>.....................................</span></p><p style='margin-top:5px'><#Manufacturer#> :</p>";
 				overlibStrTmp += retData[0];
 			}

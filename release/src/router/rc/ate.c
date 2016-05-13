@@ -2,7 +2,7 @@
 #include <shutils.h>
 #ifdef RTCONFIG_RALINK
 #include <ralink.h>
-#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1)|| defined(RTAC54U)
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTN56UB2) || defined(RTAC54U)
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
 #endif
@@ -11,7 +11,7 @@
 #include <qca.h>
 #endif
 #include "ate.h"
-#ifdef RT4GAC55U
+#ifdef RTCONFIG_INTERNAL_GOBI
 #include <at_cmd.h>
 #endif
 #ifdef RTCONFIG_QCA_PLC_UTILS
@@ -92,11 +92,11 @@ isNumber(const char *num)
 		return 0;
 }
 
-int
+int 
 isValidRegrev(char *regrev) {
 	char *c = regrev;
 	int len, i = 0, ret=0;
-
+	
 	len = strlen(regrev);
 
 	if( len==1 || len==2 || len ==3) {
@@ -216,7 +216,7 @@ int isValidSN(const char *sn)
 			return 0;
 		c++;
 		i++;
-	}
+	}	
 
 	return 1;
 }
@@ -283,7 +283,7 @@ Get_SD_Card_Info(void)
 		puts("0");
 		return 1;
 	}
-
+		
 	sprintf(check_cmd, "test_disk2 %s &> /var/sd_info.txt", nvram_safe_get("usb_path3_fs_path0"));
 	system(check_cmd);
 
@@ -318,7 +318,7 @@ Get_SD_Card_Folder(void)
 
 int Ej_device(const char *dev_no)
 {
-	if( dev_no==NULL || *dev_no<'1' || *dev_no>'9' )
+	if( dev_no==NULL || *dev_no<'1' || *dev_no>'9' ) 
 		return 0;
 	else {
 		eval("ejusb", (char*)dev_no);
@@ -474,7 +474,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 			return EINVAL;
 		return 0;
 	}
-#endif
+#endif	
 #if defined(RTCONFIG_NEW_REGULATION_DOMAIN)
 	else if (!strcmp(command, "Set_RegSpec")) {
 		if (setRegSpec(value, 1) < 0)
@@ -599,13 +599,13 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 			dev.sll_protocol = htons(ETH_P_ALL);
 			dev.sll_ifindex = 4; // LAN
 			bind( fd, (struct sockaddr *) &dev, sizeof(dev));
-
+			
 			fd2 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 			dev2.sll_family = AF_PACKET;
 			dev2.sll_protocol = htons(ETH_P_ALL);
 			dev2.sll_ifindex = 5; // WAN
 			bind( fd2, (struct sockaddr *) &dev2, sizeof(dev2));
-
+	
 			if (value) {
 				if(strcmp(value,"WAN")==0)
 					do_flag = 2;
@@ -775,7 +775,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		stop_udhcpc(-1);
 		return 0;
 	}
-#if defined(RTAC1200HP) || defined(RTN56UB1)
+#if defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTN56UB2)
         else if (!strcmp(command, "Set_FixChannel")) {
 	   	 FWrite("1", OFFSET_FIX_CHANNEL, 1);	
                  puts("1");
@@ -822,12 +822,6 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		puts(nvram_safe_get("btn_ez"));
 		return 0;
 	}
-#ifdef RT4GAC55U
-	else if (!strcmp(command, "Get_LteButtonStatus")) {
-		puts(nvram_safe_get("btn_lte"));
-		return 0;
-	}
-#endif
 #ifdef RTCONFIG_WIFI_TOG_BTN
 	else if (!strcmp(command, "Get_WirelessButtonStatus")) {
 		puts(nvram_safe_get("btn_wifi_toggle"));
@@ -1051,7 +1045,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 #ifdef RTCONFIG_RALINK
-#if !defined(RTN14U) && !defined(RTAC52U) && !defined(RTAC51U) && !defined(RTN11P) && !defined(RTN300) && !defined(RTN54U) && !defined(RTAC1200HP) && !defined(RTN56UB1) && !defined(RTAC54U)
+#if !defined(RTN14U) && !defined(RTAC52U) && !defined(RTAC51U) && !defined(RTN11P) && !defined(RTN300) && !defined(RTN54U) && !defined(RTAC1200HP) && !defined(RTN56UB1) && !defined(RTAC54U) && !defined(RTN56UB2)
 	else if (!strcmp(command, "Ra_FWRITE")) {
 		return FWRITE(value, value2);
 	}
@@ -1318,7 +1312,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 	}
 #endif
 #endif	/* RTCONFIG_QCA */
-#ifdef RT4GAC55U
+#ifdef RTCONFIG_INTERNAL_GOBI
+	else if(!strcmp(command, "Get_LteButtonStatus")) {
+		puts(nvram_safe_get("btn_lte"));
+		return 0;
+	}
 	else if(!strcmp(command, "Get_GobiSimCard")) {
 		char line[128];
 		if (!Gobi_SimCardReady(Gobi_SimCard(line, sizeof(line))))
@@ -1413,7 +1411,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		cprintf("line(%p) band(%p)\n", line, band);
 		printf("%s\n", band);
 	}
-#endif	/* RT4GAC55U */
+#endif	/* RTCONFIG_INTERNAL_GOBI */
 #if defined(RTCONFIG_TCODE)
         else if (!strcmp(command, "Set_TerritoryCode")) {
 #if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
@@ -1509,7 +1507,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 #endif
-	else
+	else 
 	{
 		puts("ATE_UNSUPPORT");
 		return EINVAL;

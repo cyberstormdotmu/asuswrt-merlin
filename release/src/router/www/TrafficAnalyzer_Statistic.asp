@@ -261,7 +261,10 @@ function get_client_info(list_info, type){
 	var code = "";
 	var match_flag = 0;
 	var temp_array = new Array();
-	code = "<option value='all' selected>All Clients</option>";
+	if(type == "router")
+		code = "<option value='all' selected>All Clients</option>";
+	else
+		code = "<option value='all' selected>All apps</option>";
 	top5_client_array = [];
 	top5_app_array = [];
 
@@ -547,7 +550,12 @@ function show_all_info(mac, type){
 					
 		for(i=0;i<app_used_by_client_array.length;i++){
 			code += '<tr>';
-			code += '<td style="text-align:left;">' + app_used_by_client_array[i][0] + '</td>';
+			if(clientList[app_used_by_client_array[i][0]] == undefined)
+				code += '<td style="text-align:left;">' + app_used_by_client_array[i][0] + '</td>';
+			else
+				code += '<td style="text-align:left;">' + clientList[app_used_by_client_array[i][0]].name + '</td>';
+			
+			
 			traffic_temp = translate_traffic(app_used_by_client_array[i][1]);	
 			code += '<td style="text-align:right;">' + traffic_temp[0] + ' ' + traffic_temp[1] +'</td>';
 			traffic_temp = translate_traffic(app_used_by_client_array[i][2]);	
@@ -677,7 +685,7 @@ function register_event(){
 	var duration = 0;
 	var mode = "";
 	var traffic_chart = document.getElementById('traffic_chart').getContext('2d');
-    flow_obj = new Chart(traffic_chart);	
+	flow_obj = new Chart(traffic_chart);
 	var pie= document.getElementById("pie_chart").getContext("2d");
 	pie_obj = new Chart(pie);
 	$( "#datepicker" ).datepicker({
@@ -694,7 +702,8 @@ function register_event(){
 			if(date < 10)
 				date = "0" + date.toString();
 			
-			date_string = year + "/" + month + "/" + date + "/" + hour;	
+			date_string = year + "/" + month + "/" + date + "/" + hour;
+			date_second += 86400; // shift 24 hour to make traffic chart correct
 			if(document.getElementById('duration_option').value == "monthly"){
 				duration = 31;
 				mode = "day";
@@ -820,7 +829,11 @@ function switch_date_type(obj){
 	}
 
 	document.getElementById('info_block_title').innerHTML = info_date + " Top 5 " + info_type + " Used"
-	get_every_client_data("all", "detail", duration, date_second, date_string);
+	if(info_type == "Clients")
+		get_every_client_data("all", "detail", duration, date_second, date_string);
+	else
+		get_every_app_data("all", "detail", duration, date_second, date_string);
+	
 	get_wan_data("all", mode, duration, date_second, date_string);
 	document.getElementById('graphical_info_block').style.display = "block";
 	document.getElementById('detail_info_block').style.display = "none";
@@ -1352,7 +1365,7 @@ function cancel(){
 }
 
 function applyRule(){
-	document.form.action_script.value = "restart_hour_monitor;restart_wrs;restart_firewall";
+	document.form.action_script.value = "restart_wrs;restart_firewall";
 	document.form.submit();
 }
 
@@ -1370,7 +1383,6 @@ function setHover_css(){
 }
 var time_flag;
 function introduce_demo(){
-	console.log("2");
 	cal_panel_block("demo_background");
 	document.getElementById("demo_background").style.display = "";
 	document.getElementById("demo_background").style.zIndex = "5";
@@ -1443,7 +1455,7 @@ function getClientCurrentName(_mac) {
 													<div>
 														<table align="right">
 															<tr>
-																<td style="cursor:pointer;" onclick="introduce_demo();" id="introduce_demo"><div id="play_icon" class="icon_play" style="padding:1px;display:table-cell;width:22px;height:18px;"></div><div style="display:table-cell;font-size:16px;text-decoration:underline;padding-left:7px;" >Introduce demo</div></td>
+																<td style="cursor:pointer;" onclick="introduce_demo();" id="introduce_demo"><div id="play_icon" class="icon_play" style="padding:1px;display:table-cell;width:22px;height:22px;"></div><div style="display:table-cell;font-size:16px;text-decoration:underline;padding-left:7px;" >Introduce demo</div></td>
 																<!--td>														
 																	<div class="formfonttitle" style="margin-bottom:0px;margin-left:20px;" title="<#traffic_analysis_desc#>">Traffic Statistic</div>
 																</td-->
