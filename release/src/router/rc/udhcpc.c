@@ -1085,6 +1085,9 @@ skip:
 			bound ? "bound" : "informed",
 			*address ? "address " : "", address, *address ? ", " : "",
 			*prefix ? "prefix " : "", prefix);
+#ifdef RTCONFIG_IGD2
+		notify_rc("restart_upnp");
+#endif
 	}
 
 	return 0;
@@ -1118,10 +1121,10 @@ start_dhcp6c(void)
 {
 	char *wan_ifname = (char *)get_wan6face();
 	char *dhcp6c_argv[] = { "odhcp6c",
-#ifdef RTCONFIG_BCMARM
-		"-df",
-#else
+#ifndef RTCONFIG_BCMARM
 		"-f",
+#else
+		"-df",
 #endif
 		"-R",
 		"-s", "/tmp/dhcp6c",
@@ -1142,8 +1145,10 @@ start_dhcp6c(void)
 	} __attribute__ ((__packed__)) duid;
 	char duid_arg[sizeof(duid)*2+1];
 	char prefix_arg[sizeof("128:xxxxxxxx")];
-	pid_t pid;
 	int i;
+#ifndef RTCONFIG_BCMARM
+	pid_t pid;
+#endif
 
 	/* Check if enabled */
 	if (get_ipv6_service() != IPV6_NATIVE_DHCP)
@@ -1195,7 +1200,11 @@ start_dhcp6c(void)
 
 	dhcp6c_argv[index++] = wan_ifname;
 
+#ifndef RTCONFIG_BCMARM
 	return _eval(dhcp6c_argv, NULL, 0, &pid);
+#else
+	return _eval(dhcp6c_argv, NULL, 0, NULL);
+#endif
 }
 
 void stop_dhcp6c(void)
