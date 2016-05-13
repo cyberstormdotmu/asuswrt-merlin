@@ -1031,9 +1031,6 @@ function pass_checked(obj){
               	<td colspan="2"><#PPPConnection_UserName_sectionname#></td>
             	</tr>
             	</thead>
-                <th>MTU</th>
-                <td><input type="text" maxlength="5" name="wan_mtu" class="input_6_table" value="<% nvram_get("wan_mtu"); %>" onKeyPress="return validator.isNumber(this,event);"/></td>
-                </tr>
             	<tr>
 							<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(7,29);"><#PPPConnection_Authentication_itemname#></a></th>
 							<td align="left">
@@ -1129,6 +1126,9 @@ function pass_checked(obj){
           		<div><input type="text" name="wan_hostname" class="input_32_table" maxlength="32" value="<% nvram_get("wan_hostname"); %>" onkeypress="return validator.isString(this, event)" autocorrect="off" autocapitalize="off"><br/><span id="alert_msg1" style="color:#FC0;"></span></div>
           	</td>
         	</tr>
+                <th>WAN MTU</th>
+                <td><input type="text" maxlength="5" name="wan_mtu" class="input_6_table" value="<% nvram_get("wan_mtu"); %>" onKeyPress="return validator.isNumber(this,event);"/></td>
+                </tr>
         	<tr>
           	<th ><a class="hintstyle" href="javascript:void(0);" onClick="openHint(7,16);"><#PPPConnection_x_MacAddressForISP_itemname#></a></th>
 				<td>
@@ -1148,7 +1148,7 @@ function pass_checked(obj){
 		</tr>
 
 		<tr>
-		<th>Manual clientid (for some ISPs)</th>
+		<th>Manual clientid (Option 61)</th>
 			<td><input type="text" name="wan_dhcpc_options" class="input_32_table" maxlength="128" value="<% nvram_get("wan_dhcpc_options"); %>" onkeypress="return is_string(this, event)"></td>
 		</tr>
 

@@ -485,6 +485,7 @@ obj-$(RTCONFIG_TUXERA_HFS) += tuxera
 endif
 obj-$(RTCONFIG_EBTABLES) += ebtables
 obj-$(RTCONFIG_IPV6) += odhcp6c
+obj-$(RTCONFIG_6RELAYD) += 6relayd
 #obj-$(RTCONFIG_IPV6) += ecmh
 
 obj-$(RTCONFIG_MEDIA_SERVER) += zlib
@@ -1337,6 +1338,19 @@ else
 		--disable-debugfs --disable-imager --disable-resizer --disable-defrag --disable-uuidd
 endif
 
+6relayd: 6relayd/Makefile
+	@EXT_CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+	EXT_LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	PREFIX="/usr" \
+	$(MAKE) -C 6relayd
+
+6relayd-install: 6relayd
+	install -D 6relayd/src/6relayd $(INSTALLDIR)/6relayd/usr/sbin/6relayd
+	$(STRIP) $(INSTALLDIR)/6relayd/usr/sbin/6relayd
+
+6relayd-clean:
+	-@$(MAKE) -C 6relayd clean
+
 e2fsprogs: e2fsprogs/Makefile
 	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
@@ -1423,7 +1437,7 @@ openssl/Makefile:
 	cd openssl && \
 	./Configure $(HOSTCONFIG) --openssldir=/etc --cross-compile-prefix=' ' \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections \
-	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3
+	shared $(OPENSSL_CIPHERS)
 #	no-sha0 no-smime no-camellia no-krb5 no-rmd160 no-ripemd \
 #	no-seed no-capieng no-cms no-gms no-gmp no-rfc3779 \
 #	no-ec no-ecdh no-ecdsa no-err no-hw no-jpake no-threads \
@@ -1667,7 +1681,7 @@ nettle/stamp-h1:
 
 nettle: nettle/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C nettle
+	@$(MAKE) -C nettle $(PARALLEL_BUILD)
 	@$(MAKE) -C nettle install
 
 nettle-clean:
@@ -2322,7 +2336,7 @@ quagga/stamp-h1:
 	@touch $@
 
 quagga: quagga/stamp-h1
-	@$(MAKE) -C quagga CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD)
+	@$(MAKE) -C quagga CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) $(PARALLEL_BUILD)
 
 quagga-clean:
 	-@$(MAKE) -C quagga clean
@@ -2544,7 +2558,7 @@ iperf-clean:
 	[ ! -f iperf/Makefile ] || $(MAKE) -C iperf distclean
 
 libevent-2.0.21: libevent-2.0.21/Makefile
-	$(MAKE) -C $@ && $(MAKE) $@-stage
+	$(MAKE) -C $@ $(PARALLEL_BUILD) && $(MAKE) $@-stage
 
 libevent-2.0.21/Makefile:
 	$(MAKE) libevent-2.0.21-configure
@@ -2615,7 +2629,7 @@ rstats: nvram$(BCMEX) shared
 
 dropbear: dropbear/config.h
 	@$(SEP)
-	@$(MAKE) -C dropbear PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1
+	@$(MAKE) -C dropbear PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1 $(PARALLEL_BUILD)
 
 dropbear-install:
 	install -D dropbear/dropbearmulti $(INSTALLDIR)/dropbear/usr/bin/dropbearmulti
@@ -3001,6 +3015,15 @@ endif
 snooper-clean:
 	$(MAKE) -C snooper clean
 
+udpxy:
+	$(MAKE) -C $@ release NO_UDPXREC=yes \
+	CDEFS="-O2 -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
+	LDFLAGS="-Wl,--gc-sections"
+
+udpxy-install:
+	install -D udpxy/udpxy $(INSTALLDIR)/udpxy/usr/sbin/udpxy
+	$(STRIP) $(INSTALLDIR)/udpxy/usr/sbin/udpxy
+
 netconf: $(IPTABLES)
 	+$(MAKE) LINUXDIR=$(LINUXDIR) -C netconf
 
@@ -3182,7 +3205,7 @@ openpam-clean:
 	@rm -f openpam/Makefile
 
 openvpn: shared openssl lzo openpam zlib openvpn/Makefile
-	$(MAKE) -C $@
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 openvpn/Makefile:
 	$(MAKE) openvpn-configure
@@ -3198,7 +3221,7 @@ openvpn-configure:
 		IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			--disable-debug --enable-management --disable-small \
-			--disable-selinux --disable-socks --enable-password-save \
+			--disable-selinux --disable-socks \
 			--enable-plugin-auth-pam --enable-iproute2 \
 			ac_cv_lib_resolv_gethostbyname=no \
 	)
@@ -3539,7 +3562,7 @@ webdav_client$(BCMEX)-clean:
 #add by gauss
 #add install libcurl
 curl-7.21.7: curl-7.21.7/Makefile
-	@$(MAKE) -C curl-7.21.7 && $(MAKE) $@-stage
+	@$(MAKE) -C curl-7.21.7 $(PARALLEL_BUILD) && $(MAKE) $@-stage
 
 curl-7.21.7/Makefile:
 	$(MAKE) curl-7.21.7-configure
@@ -3597,6 +3620,7 @@ net-snmp-5.7.2/stamp-h1: shared nvram$(BCMEX) $(if $(RTCONFIG_QTN),libqcsapi_cli
 	@touch net-snmp-5.7.2/stamp-h1
 
 net-snmp-5.7.2: net-snmp-5.7.2/stamp-h1
+	@$(MAKE) -C net-snmp-5.7.2
 
 net-snmp-5.7.2-install:
 	@$(MAKE) -C net-snmp-5.7.2 install
@@ -3732,7 +3756,7 @@ db-4.8.30/build_unix/stamp-h1:
 
 db-4.8.30: db-4.8.30/build_unix/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C db-4.8.30/build_unix
+	@$(MAKE) -C db-4.8.30/build_unix $(PARALLEL_BUILD)
 
 db-4.8.30-install: db-4.8.30
 	install -D db-4.8.30/build_unix/.libs/libdb-4.8.so $(INSTALLDIR)/db-4.8.30/usr/lib/libdb-4.8.so
@@ -3835,7 +3859,7 @@ expat-2.0.1-clean:
 #avahi-0.6.31
 avahi-0.6.31: shared nvram$(BCMEX) expat-2.0.1 libdaemon avahi-0.6.31/Makefile
 	@$(SEP)
-	@$(MAKE) -C avahi-0.6.31
+	@$(MAKE) -C avahi-0.6.31 $(PARALLEL_BUILD)
  
 avahi-0.6.31/Makefile:
 	$(MAKE) avahi-0.6.31-configure

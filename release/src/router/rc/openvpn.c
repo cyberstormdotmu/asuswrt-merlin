@@ -236,6 +236,9 @@ void start_vpnclient(int clientNum)
 	sprintf(&buffer[0], "vpn_client%d_cipher", clientNum);
 	if ( !nvram_contains_word(&buffer[0], "default") )
 		fprintf(fp, "cipher %s\n", nvram_safe_get(&buffer[0]));
+	sprintf(&buffer[0], "vpn_client%d_digest", clientNum);
+	if ( !nvram_contains_word(&buffer[0], "default") )
+		fprintf(fp, "auth %s\n", nvram_safe_get(&buffer[0]));
 	sprintf(&buffer[0], "vpn_client%d_rgw", clientNum);
 	nvi = nvram_get_int(&buffer[0]);
 	if (nvi == 1)
@@ -438,7 +441,7 @@ void start_vpnclient(int clientNum)
 	// Start the VPN client
 	sprintf(&buffer[0], "/etc/openvpn/vpnclient%d", clientNum);
 	sprintf(&buffer2[0], "/etc/openvpn/client%d", clientNum);
-	taskset_ret = cpu_eval(NULL, (clientNum % 2 == 0 ? CPU1 : CPU0), &buffer[0], "--cd", &buffer2[0], "--config", "config.ovpn");
+	taskset_ret = cpu_eval(NULL, (clientNum % 2 == 0 ? CPU0 : CPU1), &buffer[0], "--cd", &buffer2[0], "--config", "config.ovpn");
 
 	vpnlog(VPN_LOG_INFO,"Starting OpenVPN client %d", clientNum);
 
@@ -463,6 +466,7 @@ void start_vpnclient(int clientNum)
 		fprintf(fp, "#!/bin/sh\n");
 		fprintf(fp, "iptables -I INPUT -i %s -j ACCEPT\n", &iface[0]);
 		fprintf(fp, "iptables -I FORWARD %d -i %s -j ACCEPT\n", (nvram_match("cstats_enable", "1") ? 4 : 2), &iface[0]);
+		fprintf(fp, "iptables -t mangle -I PREROUTING -i %s -j MARK --set-mark 0x01/0x7\n", &iface[0]);
 		// Setup traffic accounting
 		if (nvram_match("cstats_enable", "1")) {
 			ipt_account(fp, &iface[0]);
@@ -818,12 +822,6 @@ void start_vpnserver(int serverNum)
 	else
 		fprintf(fp_client, "proto tcp-client\n");
 
-	// Don't explicitely set socket buffer size
-	sprintf(&buffer[0], "vpn_server%d_sockbuf", serverNum);
-	if (nvram_match(&buffer[0], "1")) {
-		fprintf(fp, "rcvbuf 0\nsndbuf 0\n");
-	}
-
 	//port
 	sprintf(&buffer[0], "vpn_server%d_port", serverNum);
 	fprintf(fp, "port %d\n", nvram_get_int(&buffer[0]));
@@ -842,6 +840,13 @@ void start_vpnserver(int serverNum)
 	if ( !nvram_contains_word(&buffer[0], "default") ) {
 		fprintf(fp, "cipher %s\n", nvram_safe_get(&buffer[0]));
 		fprintf(fp_client, "cipher %s\n", nvram_safe_get(&buffer[0]));
+	}
+
+	//digest
+	sprintf(&buffer[0], "vpn_server%d_digest", serverNum);
+	if ( !nvram_contains_word(&buffer[0], "default") ) {
+		fprintf(fp, "auth %s\n", nvram_safe_get(&buffer[0]));
+		fprintf(fp_client, "auth %s\n", nvram_safe_get(&buffer[0]));
 	}
 
 	//compression
@@ -1016,7 +1021,6 @@ void start_vpnserver(int serverNum)
 				fprintf(fp, "client-cert-not-required\n");
 				fprintf(fp, "username-as-common-name\n");
 			}
-			fprintf(fp, "duplicate-cn\n");
 		}
 
 		fprintf(fp_client, "ns-cert-type server\n");
@@ -1404,6 +1408,7 @@ void start_vpnserver(int serverNum)
 		{
 			fprintf(fp, "iptables -I INPUT -i %s -j ACCEPT\n", &iface[0]);
 			fprintf(fp, "iptables -I FORWARD %d -i %s -j ACCEPT\n", (nvram_match("cstats_enable", "1") ? 4 : 2), &iface[0]);
+			fprintf(fp, "iptables -t mangle -I PREROUTING -i %s -j MARK --set-mark 0x01/0x7\n", &iface[0]);
 		}
 		if (nvram_match("cstats_enable", "1")) {
 			ipt_account(fp, &iface[0]);
@@ -1727,7 +1732,7 @@ int write_vpn_resolv(FILE* f)
 	struct dirent *file;
 	char *fn, ch, num, buf[24];
 	FILE *dnsf;
-	int strictlevel = 0, ch2;
+	int strictlevel = 0, ch2, level;
 
 	if ( chdir("/etc/openvpn/dns") )
 		return 0;
@@ -1744,6 +1749,14 @@ int write_vpn_resolv(FILE* f)
 
 		if ( sscanf(fn, "client%c.resol%c", &num, &ch) == 2 )
 		{
+			snprintf(&buf[0], sizeof(buf), "vpn_client%c_adns", num);
+			level = nvram_get_int(&buf[0]);
+
+			// Don't modify dnsmasq if policy routing is enabled and dns mode set to "Exclusive"
+			snprintf(&buf[0], sizeof(buf), "vpn_client%c_rgw", num);
+			if ((nvram_get_int(&buf[0]) == 3 ) && (level == 3))
+				continue;
+
 			if ( (dnsf = fopen(fn, "r")) == NULL )
 				continue;
 
@@ -1759,7 +1772,10 @@ int write_vpn_resolv(FILE* f)
 
 			snprintf(&buf[0], sizeof(buf), "vpn_client%c_adns", num);
 
-			strictlevel = nvram_get_int(&buf[0]);
+			// Only return the highest active level, so one exclusive client
+			// will override a relaxed client.
+			if (level > strictlevel)
+				strictlevel = level;
 		}
 	}
 	vpnlog(VPN_LOG_EXTRA, "Done with DNS entries...");
