@@ -17,9 +17,10 @@
 <script type="text/javascript" src="/md5.js"></script>
 <script type="text/javascript" src="/general.js"></script>
 <script type="text/javascript" src="/validator.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <script type="text/javascript" src="/disk_functions.js"></script>
+<script type="text/javascript" src="/form.js"></script>
 <style type="text/css">
 /* folder tree */
 .mask_bg{
@@ -129,13 +130,22 @@
 	margin-left:226px;
 	margin-top: 10px;
 	width:740px;
+	box-shadow: 3px 3px 10px #000;
+	display: none;
 }
 </style>
 <script>
 
-window.onresize = function(){
-	cal_panel_block("cloudAddTable_div");
-	cal_panel_block("folderTree_panel");
+window.onresize = function() {
+	if(document.getElementById("cloudAddTable_div").style.display == "block") {
+		cal_panel_block("cloudAddTable_div", 0.2);
+	}
+	if(document.getElementById("folderTree_panel").style.display == "block") {
+		cal_panel_block("folderTree_panel", 0.25);
+	}
+	if(document.getElementById("invitation").style.display == "block") {
+		cal_panel_block("invitation", 0.25);
+	}
 }
 <% get_AiDisk_status(); %>
 // invitation
@@ -166,6 +176,7 @@ var curRule = {
 	RouterSync: -1,
 	Dropbox:-1,
 	SambaClient: -1,
+	UsbClient: -1,
 	end: 0
 }
 
@@ -202,7 +213,7 @@ function showInvitation(){
 	if(window.scrollTo)
 		window.scrollTo(0,0);
 
-	cal_panel_block("cloudAddTable_div");
+	cal_panel_block("invitation", 0.25);
 	if(!isInvite){
 		document.getElementById("invitationInfo").innerHTML = "<br/> <#aicloud_invitation_invalid#>";
 		$("#invitation").fadeIn(300);
@@ -217,12 +228,12 @@ function showInvitation(){
 		
 		htmlCode += "<tr height='40px'><td width='30%'><#sync_router_localfolder#></td><td>";
 		htmlCode += "<input type='text' id='PATH_rs' class='input_20_table' style='margin-left:0px;height:23px;' name='cloud_dir' value='' onclick=''/>";
-		htmlCode += "<input name='button' type='button' class='button_gen_short' style='margin-left:5px;' onclick='get_disk_tree();document.getElementById(\"folderTree_panel\").style.marginLeft+=30;' value='<#Cloudsync_browser_folder#>'/>";
+		htmlCode += "<input name='button' type='button' class='button_gen_short' style='margin-left:5px;' onclick='get_disk_tree(1);document.getElementById(\"folderTree_panel\").style.marginLeft+=30;' value='<#Cloudsync_browser_folder#>'/>";
 		htmlCode += "</td></tr>";
 		
 		if(decode_array[3] != ""){
 			htmlCode += "<tr id='verification' height='40px'><td width='30%'>Verification</td><td><input id='veriCode' type='text' onkeypress='return validator.isNumber(this,event)' class='input_6_table' style='margin-left:0px;' maxlength='4' value=''>";
-			htmlCode += "<span style='color:#FC0;display:none;margin-left:5px;' id='codeHint'>Invalid verification code!</span></td></tr>";
+			htmlCode += "<span style='color:#FC0;display:none;margin-left:5px;' id='codeHint'><#JS_Invalid_Vcode#></span></td></tr>";
 		}
 
 		htmlCode += "</table>";
@@ -302,7 +313,8 @@ function initial_dir_status(data){
 		var default_dir = data.replace(/\"/g, "");
 		document.form.cloud_dir.value = "/mnt/" + default_dir.substr(0, default_dir.indexOf("#")) + "/MySyncFolder";
 	}
-	else{	
+	else{
+		document.getElementById("noUSB0").style.display = "";	
 		document.getElementById("noUSB").style.display = "";
 		disk_flag=1;
 	}
@@ -378,6 +390,17 @@ function edit_Row(r){
 		document.form.cloud_dir.value = cloud_synclist_all[r][7].substring(4);	
 		showOneProvider("/images/cloudsync/ftp_server.png", "Samba");
 	}
+	else if(cloud_synclist_all[r][0] == 5){
+		change_service("Usb");
+		document.form.usbclient_name.value = cloud_synclist_all[r][1];
+		document.form.usbclient_ip.value = cloud_synclist_all[r][2].substring(6);
+		document.form.usbclient_sharefolder.value = cloud_synclist_all[r][3];
+		document.form.cloud_username.value = cloud_synclist_all[r][4];
+		document.form.cloud_password.value = cloud_synclist_all[r][5];
+		document.form.cloud_rule.value = cloud_synclist_all[r][6];
+		document.form.cloud_dir.value = cloud_synclist_all[r][7].substring(4);	
+		showOneProvider("/images/cloudsync/ftp_server.png", "Usb");
+	}
 	else{
 		var ftp_protocol_temp ="";
 		change_service("FTP");
@@ -403,6 +426,7 @@ function delRow(_rulenum){
 }
 
 var iCountSamba = 0;
+var iCountUsb = 0;
 function showcloud_synclist(){
 	var rsnum = 0;
 	var cloud_synclist_row = cloud_synclist_array.split('&#60');
@@ -499,6 +523,18 @@ function showcloud_synclist(){
 				cloudListTableItem.syncStatusDefaultStr = "Waiting..."
 				curRule.SambaClient = cloudListTableItem.rule;
 				iCountSamba++;
+			}
+			else if(cloud_synclist_col[0] == 5){ // UsbClient
+				cloudListTableItem.provider = cloud_synclist_col[0];
+				cloudListTableItem.icon = "ftp_server.png";
+				cloudListTableItem.username = cloud_synclist_col[1];
+				cloudListTableItem.rule = cloud_synclist_col[6];
+				cloudListTableItem.ruleId = "usbclient_status_image"
+				cloudListTableItem.path = cloud_synclist_col[7];
+				cloudListTableItem.syncStatusId = "cloudStatus_usbclient";
+				cloudListTableItem.syncStatusDefaultStr = "Waiting..."
+				curRule.UsbClient = cloudListTableItem.rule;
+				iCountUsb++;
 			}
 			else{
 				continue;
@@ -736,6 +772,59 @@ function updateCloudStatus(){
 						document.getElementById("cloudStatus_ftpclient").innerHTML = '<div style="text-decoration:underline; cursor:pointer" onmouseout="return nd();" onclick="return overlib(\''+ _cloud_ftpclient_msg +'\');">'+ _cloud_ftpclient_status +'</div>';
 					}
 
+					// usb client
+					
+					if(document.getElementById("cloudStatus_usbclient")){
+						if( cloud_usbclient_status.toUpperCase() == "DOWNUP"){
+							 cloud_usbclient_status = "SYNC";
+							document.getElementById("usbclient_status_image").firstChild.className="status_gif_Img_0";
+						}
+						else if( cloud_usbclient_status.toUpperCase() == "ERROR"){
+							document.getElementById("usbclient_status_image").firstChild.className="status_png_Img_error";
+						}
+						else if( cloud_usbclient_status.toUpperCase() == "UPLOAD"){
+							document.getElementById("usbclient_status_image").firstChild.className="status_gif_Img_2";
+						}
+						else if( cloud_usbclient_status.toUpperCase() == "DOWNLOAD"){
+							document.getElementById("usbclient_status_image").firstChild.className="status_gif_Img_1";
+						}
+						else if( cloud_usbclient_status.toUpperCase() == "SYNC"){
+							 cloud_usbclient_status = "Finish";
+							if(curRule.usbclient == 2){
+								document.getElementById("usbclient_status_image").firstChild.className="status_png_Img_L_ok";
+							}else if(curRule.usbclient == 1){
+								document.getElementById("usbclient_status_image").firstChild.className="status_png_Img_R_ok";
+							}else{
+								document.getElementById("usbclient_status_image").firstChild.className="status_png_Img_LR_ok";
+							}	
+						}
+
+	
+						// handle msg
+						var _cloud_usbclient_msg = "";
+						if(cloud_usbclient_obj != ""){
+							_cloud_usbclient_msg +=  "<b>";
+							_cloud_usbclient_msg += cloud_usbclient_status;
+							_cloud_usbclient_msg += ": </b><br />";
+							_cloud_usbclient_msg += "<span style=\\'word-break:break-all;\\'>" + decodeURIComponentSafe(cloud_usbclient_obj) + "</span>";
+						}
+						else if(cloud_usbclient_msg){
+							_cloud_usbclient_msg += cloud_usbclient_msg;
+						}
+						else{
+							_cloud_usbclient_msg += "<#aicloud_no_record#>";
+						}
+	
+						// handle status
+						var _cloud_usbclient_status;
+						if(cloud_usbclient_status != "")
+							_cloud_usbclient_status = cloud_usbclient_status;
+						else
+							_cloud_v_status = "";
+	
+						document.getElementById("cloudStatus_usbclient").innerHTML = '<div style="text-decoration:underline; cursor:pointer" onmouseout="return nd();" onclick="return overlib(\''+ _cloud_usbclient_msg +'\');">'+ _cloud_usbclient_status +'</div>';
+					}
+
 					// samba client
 					
 					if(document.getElementById("cloudStatus_sambaclient")){
@@ -852,7 +941,8 @@ function validform(){
 	if(document.getElementById('select_service').innerHTML != "WebStorage"
 	&& document.getElementById('select_service').innerHTML != "Dropbox"
 	&& document.getElementById('select_service').innerHTML != "FTP server"
-	&& document.getElementById('select_service').innerHTML != "Samba"){
+	&& document.getElementById('select_service').innerHTML != "Samba"
+	&& document.getElementById('select_service').innerHTML != "Usb"){
 		alert("Please select the provider!!");
 		return false;
 	}
@@ -880,8 +970,16 @@ function validform(){
 			return false;
 		}
 	}
+
+	if(document.getElementById('select_service').innerHTML == "Usb"){
+		if(document.form.usbclient_sharefolder.value == ''){
+			alert("The Share folder can't NULL");
+			document.form.usbclient_sharefolder.focus();
+			return false;
+		}
+	}
 	
-	if(document.getElementById('select_service').innerHTML != "FTP server"){		// to allow ftp client could use anonymous/anonymous, blank field, Jieming added at 2013/12/09
+	if((document.getElementById('select_service').innerHTML != "FTP server") && (document.getElementById('select_service').innerHTML != "Usb") ){		// to allow ftp client could use anonymous/anonymous, blank field, Jieming added at 2013/12/09
 		if(document.form.cloud_username.value == ''){
 			alert("<#File_Pop_content_alert_desc1#>");
 			document.form.cloud_username.focus();
@@ -893,7 +991,7 @@ function validform(){
 	if(!Block_chars(document.form.cloud_password, ["<", ">"]))
 		return false;
 
-	if(document.getElementById('select_service').innerHTML != "FTP server"){		// to allow ftp client could use anonymous/anonymous, blank field, Jieming added at 2013/12/09
+	if((document.getElementById('select_service').innerHTML != "FTP server") && (document.getElementById('select_service').innerHTML != "Usb")){		// to allow ftp client could use anonymous/anonymous, blank field, Jieming added at 2013/12/09
 		if(document.form.cloud_password.value == ''){
 			alert("<#File_Pop_content_alert_desc6#>");
 			document.form.cloud_password.focus();
@@ -911,6 +1009,14 @@ function validform(){
 		alert("<#ALERT_OF_ERROR_Input10#>");
 		document.form.cloud_dir.focus();
 		return false;
+	}
+
+	if(document.getElementById('select_service').innerHTML == "Usb"){		
+		if(document.form.usbclient_sharefolder.value.search(document.form.cloud_dir.value) == 0 || document.form.cloud_dir.value.search(document.form.usbclient_sharefolder.value) == 0){
+			alert("The Share folder can't be set the same path.");
+			document.form.usbclient_sharefolder.focus();
+			return false;
+		}
 	}
 
 	// add mode need check account whether had created or not.
@@ -996,6 +1102,17 @@ function applyRule(){
 			newRule.push(document.form.cloud_rule.value);
 			newRule.push("/tmp"+document.form.cloud_dir.value);	
 		}
+		else if(document.getElementById('select_service').innerHTML == "Usb"){
+			//[0] = Provider, [1] = Work Group, [2] = Server IP address, [3] = Server share folder, [4] = Username, [5] = Password, [6] = Cloud rule, [7]  = Cloud dir
+			newRule.push(5);
+			newRule.push(document.form.usbclient_name.value);
+			newRule.push(document.form.usbclient_ip.value);
+			newRule.push(document.form.usbclient_sharefolder.value);
+			newRule.push(document.form.cloud_username.value);
+			newRule.push(document.form.cloud_password.value);
+			newRule.push(document.form.cloud_rule.value);
+			newRule.push("/tmp"+document.form.cloud_dir.value);	
+		}
 
 		if(editRule != -1){
 			cloud_synclist_rules[editRule-1] = newRule.join(">");
@@ -1031,25 +1148,27 @@ function convSrv(val){
 	else if(val == 2) return "ftpserver";
 	else if(val == 3) return "dropbox";
 	else if(val == 4) return "sambaclient";
+	else if(val == 5) return "usbclient";
 	else if(val == 9) return "new_rule";
 	else  return "unknown";
 }
 
 function showAddTable(srv, row_number){
 	var _srv = convSrv(srv);
-	cal_panel_block("cloudAddTable_div");
+	cal_panel_block("cloudAddTable_div", 0.2);
 
 	if(_srv == "webstorage"
 	|| _srv == "ftpserver"
 	|| _srv == "dropbox"
-	|| _srv == "sambaclient"){
-		$("#cloudAddTable").fadeIn();
+	|| _srv == "sambaclient"
+	|| _srv == "usbclient"){
+		$("#cloudAddTable_div").fadeIn();
 		document.getElementById("creatBtn").style.display = "none";
 		$("#applyDiv").fadeIn();
 		edit_Row(row_number);	
 	}
 	else if(_srv == "new_rule"){
-		$("#cloudAddTable").fadeIn();
+		$("#cloudAddTable_div").fadeIn();
 		document.getElementById("creatBtn").style.display = "none";
 		document.getElementById("divOneProvider").style.display = "none";
 		document.getElementById("povider_tr").style.display = "";
@@ -1061,13 +1180,19 @@ function showAddTable(srv, row_number){
 		document.getElementById("PATH").value = "";
 		document.getElementById("sambaclient_ip").value = "";
 		document.getElementById("sambaclient_sharefolder").value = "";
+		document.getElementById("usbclient_ip").value = "";
+		document.getElementById("usbclient_sharefolder").value = "";
 		if(iCountSamba!=0)
 			document.getElementById("sambaclient_name").value = "WORKGROUP(" + iCountSamba + ")";
 		else
 			document.getElementById("sambaclient_name").value = "WORKGROUP";
+		if(iCountUsb!=0)
+			document.getElementById("usbclient_name").value = "WORKGROUP(" + iCountUsb + ")";
+		else
+			document.getElementById("usbclient_name").value = "WORKGROUP";
 	}
 	else{
-		document.getElementById("cloudAddTable").style.display = "none";
+		$("#cloudAddTable_div").fadeOut();
 		$("#creatBtn").fadeIn();
 		document.getElementById("applyDiv").style.display = "none";
 	}
@@ -1075,13 +1200,21 @@ function showAddTable(srv, row_number){
 
 // get folder tree
 var folderlist = new Array();
-function get_disk_tree(){
+function get_disk_tree(flag){
 	if(disk_flag == 1){
 		alert('<#no_usb_found#>');
 		return false;	
 	}
 	
-	cal_panel_block("folderTree_panel");
+	cal_panel_block("folderTree_panel", 0.25);
+	if(flag==0){
+		document.getElementById("btn_confirm_folder0").style.display = "";
+		document.getElementById("btn_confirm_folder").style.display = "none";
+	}
+	else{
+		document.getElementById("btn_confirm_folder0").style.display = "none";
+		document.getElementById("btn_confirm_folder").style.display = "";
+	}
 	$("#folderTree_panel").fadeIn(300);
 	get_layer_items("0");
 }
@@ -1371,6 +1504,12 @@ function cancel_folderTree(){
 	$("#folderTree_panel").fadeOut(300);
 }
 
+function confirm_folderTree0(){
+	document.getElementById('usbclient_sharefolder').value = path_directory ;
+	this.FromObject ="0";
+	$("#folderTree_panel").fadeOut(300);
+}
+
 function confirm_folderTree(){
 	if(document.getElementById('PATH_rs'))
 		document.getElementById('PATH_rs').value = path_directory ;
@@ -1379,41 +1518,12 @@ function confirm_folderTree(){
 	$("#folderTree_panel").fadeOut(300);
 }
 
-function cal_panel_block(obj){
-		var blockmarginLeft;
-		var multiple = 0;
-		if(obj == "cloudAddTable_div")
-			multiple = 0.2;
-		else
-			multiple = 0.25;	// for panel ID 'folderTree_panel'
-
-		if (window.innerWidth)
-			winWidth = window.innerWidth;
-		else if ((document.body) && (document.body.clientWidth))
-			winWidth = document.body.clientWidth;
-		
-		if (document.documentElement  && document.documentElement.clientHeight && document.documentElement.clientWidth){
-			winWidth = document.documentElement.clientWidth;
-		}
-
-		if(winWidth >1050){	
-			winPadding = (winWidth-1050)/2;	
-			winWidth = 1105;
-			blockmarginLeft= (winWidth*multiple)+winPadding;
-		}
-		else if(winWidth <=1050){
-			blockmarginLeft= (winWidth)*multiple + document.body.scrollLeft;	
-		}
-
-		document.getElementById(obj).style.marginLeft = blockmarginLeft+"px";
-		document.getElementById("invitation").style.marginLeft = blockmarginLeft+"px";
-}
-
 function change_service(obj){
 	$('#WebStorage').parent().css('display','none');
 	$('#Dropbox').parent().css('display','none');
 	$('#ftp_server').parent().css('display','none');	
-	$('#Samba').parent().css('display','none');	
+	$('#Samba').parent().css('display','none');
+	$('#Usb').parent().css('display','none');	
 	
 	if(obj == "WebStorage"){
 		// document.getElementById('select_service').style.background = "url('/images/cloudsync/ASUS-WebStorage.png') no-repeat";
@@ -1421,6 +1531,9 @@ function change_service(obj){
 		document.getElementById('sambaclient_name').parentNode.parentNode.style.display = "none";
 		document.getElementById('sambaclient_ip').parentNode.parentNode.style.display = "none";
 		document.getElementById('sambaclient_sharefolder').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_name').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_ip').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_sharefolder').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_url').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_port').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_root_path').parentNode.parentNode.style.display = "none";
@@ -1439,6 +1552,9 @@ function change_service(obj){
 		document.getElementById('sambaclient_name').parentNode.parentNode.style.display = "none";
 		document.getElementById('sambaclient_ip').parentNode.parentNode.style.display = "none";
 		document.getElementById('sambaclient_sharefolder').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_name').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_ip').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_sharefolder').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_url').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_port').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_root_path').parentNode.parentNode.style.display = "none";
@@ -1457,6 +1573,9 @@ function change_service(obj){
 		document.getElementById('sambaclient_name').parentNode.parentNode.style.display = "none";
 		document.getElementById('sambaclient_ip').parentNode.parentNode.style.display = "none";
 		document.getElementById('sambaclient_sharefolder').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_name').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_ip').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_sharefolder').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_url').parentNode.parentNode.style.display = "";
 		document.getElementById('ftp_port').parentNode.parentNode.style.display = "";
 		document.getElementById('ftp_root_path').parentNode.parentNode.style.display = "";
@@ -1474,6 +1593,9 @@ function change_service(obj){
 		document.getElementById('sambaclient_name').parentNode.parentNode.style.display = "";
 		document.getElementById('sambaclient_ip').parentNode.parentNode.style.display = "";
 		document.getElementById('sambaclient_sharefolder').parentNode.parentNode.style.display = "";
+		document.getElementById('usbclient_name').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_ip').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_sharefolder').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_url').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_port').parentNode.parentNode.style.display = "none";
 		document.getElementById('ftp_root_path').parentNode.parentNode.style.display = "none";
@@ -1481,6 +1603,27 @@ function change_service(obj){
 		document.getElementById("security_code_tr").style.display = "none";
 		document.getElementById("cloud_username_tr").style.display = "";
 		document.getElementById("cloud_password_tr").style.display = "";
+		document.getElementById("applyBtn").style.display = "";
+		document.getElementById("authBtn").style.display = "none";
+		document.getElementById("authHint").style.display = "none";
+	}
+	else if(obj == "Usb"){
+		// document.getElementById('select_service').style.background = "url('/images/cloudsync/ftp_server.png') no-repeat";
+		document.getElementById('select_service').innerHTML = "Usb"; 	
+		document.getElementById('usbclient_name').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_ip').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_sharefolder').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_name').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_ip').parentNode.parentNode.style.display = "none";
+		document.getElementById('usbclient_sharefolder').parentNode.parentNode.style.display = "";
+		document.getElementById('ftp_url').parentNode.parentNode.style.display = "none";
+		document.getElementById('ftp_port').parentNode.parentNode.style.display = "none";
+		document.getElementById('ftp_root_path').parentNode.parentNode.style.display = "none";
+		//document.getElementById('cloud_rule').parentNode.parentNode.style.display = "none";
+		document.form.security_code_field.disabled = true;
+		document.getElementById("security_code_tr").style.display = "none";
+		document.getElementById("cloud_username_tr").style.display = "none";
+		document.getElementById("cloud_password_tr").style.display = "none";
 		document.getElementById("applyBtn").style.display = "";
 		document.getElementById("authBtn").style.display = "none";
 		document.getElementById("authHint").style.display = "none";
@@ -1497,12 +1640,16 @@ function change_service(obj){
 				$('#ftp_server').parent().css('display','block');
 			if(isSupport(ss_support, "samba"))
 				$('#Samba').parent().css('display','block');
+			if(isSupport(ss_support, "usb"))
+				$('#Usb').parent().css('display','block');
+
 		},
 		function(){		// for mouse leave event
 			$('#WebStorage').parent().css('display','none');
 			$('#Dropbox').parent().css('display','none');
 			$('#ftp_server').parent().css('display','none');		
 			$('#Samba').parent().css('display','none');
+			$('#Usb').parent().css('display','none');
 		}	
 	);
 }
@@ -1521,29 +1668,6 @@ function refresh_captcha(){
 	else{
 		document.getElementById('captcha_iframe').src = document.getElementById('captcha_iframe').src;
 	}
-}
-
-function cal_addTable_block(){
-	var blockmarginLeft;
-	if (window.innerWidth)
-		winWidth = window.innerWidth;
-	else if ((document.body) && (document.body.clientWidth))
-		winWidth = document.body.clientWidth;
-		
-	if (document.documentElement  && document.documentElement.clientHeight && document.documentElement.clientWidth){
-		winWidth = document.documentElement.clientWidth;
-	}
-
-	if(winWidth >1050){	
-		winPadding = (winWidth-1050)/2;	
-		winWidth = 1105;
-		blockmarginLeft= (winWidth*0.2)+winPadding;
-	}
-	else if(winWidth <=1050){
-		blockmarginLeft= (winWidth)*0.2+document.body.scrollLeft;	
-	}
-
-	document.getElementById("cloudAddTable_div").style.marginLeft = blockmarginLeft+"px";
 }
 
 //- Login dropbox
@@ -1644,7 +1768,7 @@ function onDropBoxLogin(token, uid){
 		<table>
 			<tr>
 				<td>
-					<div class="machineName" style="font-family:Microsoft JhengHei;font-size:12pt;font-weight:bolder; margin-top:20px;margin-left:30px;">You have got a new invitation!</div>
+					<div class="machineName" style="font-family:Microsoft JhengHei;font-size:12pt;font-weight:bolder; margin-top:20px;margin-left:30px;"><#Cloudsync_Get_Invitation#></div>	<!-- You have got a new invitation! -->
 				</td>
 			</tr>
 		</table>
@@ -1676,7 +1800,8 @@ function onDropBoxLogin(token, uid){
 		<div id="e0" class="folder_tree"></div>
 	<div style="background-image:url(images/Tree/bg_02.png);background-repeat:no-repeat;height:90px;">		
 		<input class="button_gen" type="button" style="margin-left:27%;margin-top:18px;" onclick="cancel_folderTree();" value="<#CTL_Cancel#>">
-		<input class="button_gen" type="button"  onclick="confirm_folderTree();" value="<#CTL_ok#>">
+		<input class="button_gen" type="button" id="btn_confirm_folder0" onclick="confirm_folderTree0();" value="<#CTL_ok#>" style="display:none;">
+		<input class="button_gen" type="button" id="btn_confirm_folder" onclick="confirm_folderTree();" value="<#CTL_ok#>" style="display:none;">
 	</div>
 </div>
 <div id="DM_mask_floder" class="mask_floder_bg"></div>
@@ -1695,8 +1820,8 @@ function onDropBoxLogin(token, uid){
 <input type="hidden" name="action_wait" value="1">
 <input type="hidden" name="cloud_sync" value="">
 <input type="hidden" name="enable_cloudsync" value="<% nvram_get("enable_cloudsync"); %>">
-<div id="cloudAddTable_div" class="contentM_qis" style="box-shadow: 3px 3px 10px #000;">
-					<table width="97%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="cloudAddTable" style="margin-top:10px;margin-bottom:10px;display:none;">
+<div id="cloudAddTable_div" class="contentM_qis">
+					<table width="97%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="cloudAddTable" style="margin-top:10px;margin-bottom:10px;">
 	  					<thead>
 	   					<tr>
 	   						<td colspan="6" id="cloud_synclist"><#aicloud_cloud_list#></td>
@@ -1724,6 +1849,9 @@ function onDropBoxLogin(token, uid){
 												<dd style="text-align: center;font-weight: bold;font-size: 13px;padding:3px;width:139px;" onclick="change_service('Samba');">  
 													<div id="Samba" style="background: url('/images/cloudsync/ftp_server.png') no-repeat; height:35px;"><a style="text-align:left;padding:10px 0px 0px 45px;">Samba</a></div>
 												</dd>
+												<dd style="text-align: center;font-weight: bold;font-size: 13px;padding:3px;width:139px;" onclick="change_service('Usb');">  
+													<div id="Usb" style="background: url('/images/cloudsync/ftp_server.png') no-repeat; height:35px;"><a style="text-align:left;padding:10px 0px 0px 45px;">Usb</a></div>
+												</dd>
 											</dl>
 										</li>
 									</ul>
@@ -1731,12 +1859,12 @@ function onDropBoxLogin(token, uid){
 							</tr>	
 						<tr style="display:none;">
 							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
-								Server Name
+								<#Server_Name#>	<!-- Server Name -->
 							</th>			
 							<td>
 							  <input type="text" class="input_32_table" maxlength="32" style="height: 23px;" id="sambaclient_name" name="sambaclient_name" autocorrect="off" autocapitalize="off">
 							  &nbsp;
-							  <span>(Optional)</span>
+							  <span><#feedback_optional#></span>
 							</td>
 						</tr>	
 						<tr style="display:none;">
@@ -1750,12 +1878,45 @@ function onDropBoxLogin(token, uid){
 						</tr>	
 						<tr style="display:none;">
 							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
-								Server share folder
+								<#Cloudsync_Shared_Folder#><!-- Server share folder -->
 							</th>			
 							<td>
 							  <input type="text"  class="input_32_table" style="height: 23px;" id="sambaclient_sharefolder" name="sambaclient_sharefolder" value="" autocorrect="off" autocapitalize="off">
 							</td>
 						</tr>	
+
+
+						<tr style="display:none;">
+							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
+								Server Name
+							</th>			
+							<td>
+							  <input type="text" class="input_32_table" maxlength="32" style="height: 23px;" id="usbclient_name" name="usbclient_name" autocorrect="off" autocapitalize="off">
+							  &nbsp;
+							  <span>(Optional)</span>
+							</td>
+						</tr>	
+						<tr style="display:none;">
+							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
+								<#WLANAuthentication11a_ExAuthDBIPAddr_itemname#>
+							</th>			
+							<td>
+								<span>usb://</span>
+							  <input type="text"  class="input_32_table" style="height: 23px;" id="usbclient_ip" name="usbclient_ip" value="" autocorrect="off" autocapitalize="off">
+							</td>
+						</tr>	
+						<tr style="display:none;">
+							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
+								Server share folder
+							</th>			
+							<td>
+							  <input type="text"  class="input_32_table" style="height: 23px;" id="usbclient_sharefolder" name="usbclient_sharefolder" value="" autocorrect="off" autocapitalize="off">
+							  <input name="button" type="button" class="button_gen_short" onclick="get_disk_tree(0);" value="<#Cloudsync_browser_folder#>"/>
+								<div id="noUSB0" style="color:#FC0;display:none;margin-left: 3px;"><#no_usb_found#></div>
+							</td>
+						</tr>	
+
+
 						<tr style="display:none;">
 							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
 								<#WLANAuthentication11a_ExAuthDBIPAddr_itemname#>
@@ -1777,7 +1938,7 @@ function onDropBoxLogin(token, uid){
 						</tr>	
 						<tr style="display:none;">
 							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
-								Remote Path
+								<#Cloudsync_Remote_Path#>	<!-- Remote Path -->
 							</th>			
 							<td>
 							  <input type="text" class="input_32_table" style="height: 23px;" id="ftp_root_path" name="ftp_root_path" value="" autocorrect="off" autocapitalize="off">
@@ -1795,7 +1956,7 @@ function onDropBoxLogin(token, uid){
 
 						  <tr id="cloud_password_tr">
 							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
-								<#PPPConnection_Password_itemname#>
+								<#HSDPAConfig_Password_itemname#>
 							</th>			
 							<td>
 								<input id="cloud_password" name="cloud_password" type="password" autocapitalization="off" onBlur="switchType(this, false);" onFocus="switchType(this, true);" class="input_32_table" style="height: 23px;" value="" autocorrect="off" autocapitalize="off">
@@ -1808,7 +1969,7 @@ function onDropBoxLogin(token, uid){
 							</th>
 							<td>
 							<input type="text" id="PATH" class="input_32_table" style="height: 23px;" name="cloud_dir" value="" onclick="" autocomplete="off" autocorrect="off" autocapitalize="off"/>
-		  					<input name="button" type="button" class="button_gen_short" onclick="get_disk_tree();" value="<#Cloudsync_browser_folder#>"/>
+		  					<input name="button" type="button" class="button_gen_short" onclick="get_disk_tree(1);" value="<#Cloudsync_browser_folder#>"/>
 								<div id="noUSB" style="color:#FC0;display:none;margin-left: 3px;"><#no_usb_found#></div>
 							</td>
 						  </tr>
@@ -1831,16 +1992,16 @@ function onDropBoxLogin(token, uid){
 								<#routerSync_Security_code#>
 							</th>
 							<td>
-								<div style="color:#FC0;"><input id="security_code_field" name="security_code_field" type="text" maxlength="6" class="input_32_table" style="height: 23px;width:100px;margin-right:10px;" autocorrect="off" autocapitalize="off">OTP Authentication</div>
+								<div style="color:#FC0;"><input id="security_code_field" name="security_code_field" type="text" maxlength="6" class="input_32_table" style="height: 23px;width:100px;margin-right:10px;" autocorrect="off" autocapitalize="off"><#OTP_Auth#><!--OTP Authentication--></div>
 							</td>
 						  </tr>
 						  <tr height="45px;" id="captcha_tr" style="display:none;">
 							<th width="30%" style="font-family: Calibri;font-weight: bolder;">
-								Captcha
+								<#Captcha#>	<!-- Captcha -->
 							</th>			
 							<td style="height:85px;">
 								<div style="height:25px;"><input id="captcha_field" name="captcha_field" type="text" maxlength="6" class="input_32_table" style="height: 23px;width:100px;margin-top:8px;" autocomplete="off" autocorrect="off" autocapitalize="off"></div>
-								<div id="captcha_hint" style="color:#FC0;height:25px;margin-top:10px;">Please input the captcha</div>						
+								<div id="captcha_hint" style="color:#FC0;height:25px;margin-top:10px;"><#Captcha_note#></div>	<!-- Please input the captcha -->
 								<div>
 									<iframe id="captcha_iframe" frameborder="0" scrolling="no" src="" style="width:230px;height:80px;*width:210px;*height:87px;margin:-60px 0 0 160px;*margin-left:165px;"></iframe>
 								</div>
@@ -1944,7 +2105,7 @@ function onDropBoxLogin(token, uid){
 
     					<tr>
       					<th width="10%"><#Provider#></th>
-    					<th width="25%"><#PPPConnection_UserName_itemname#></a></th>
+    					<th width="25%"><#HSDPAConfig_Username_itemname#></a></th>
       					<th width="10%"><#Cloudsync_Rule#></a></th>
       					<th width="30%"><#FolderName#></th>
       					<th width="15%"><#PPPConnection_x_WANLink_itemname#></th>
@@ -1956,7 +2117,7 @@ function onDropBoxLogin(token, uid){
 							<table width="99%" cellspacing="0" cellpadding="4" align="center" class="list_table" id="cloud_synclist_table">
 								<tbody>
 									<tr height="55px">
-										<td style="color:#FFCC00;" colspan="6">Detecting...</td>
+										<td style="color:#FFCC00;" colspan="6"><#QKSet_detect_sanglass#>...</td>	<!-- Detecting -->
 									</tr>
 								</tbody>
 							</table>

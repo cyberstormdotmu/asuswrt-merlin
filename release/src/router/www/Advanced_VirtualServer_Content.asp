@@ -49,6 +49,13 @@ var overlib_str = new Array();	//Viz add 2011.07 for record longer virtual srvr 
 
 var vts_rulelist_array = "<% nvram_char_to_ascii("","vts_rulelist"); %>";
 var ctf_disable = '<% nvram_get("ctf_disable"); %>';
+var wans_mode ='<% nvram_get("wans_mode"); %>';
+
+var backup_desc = "";
+var backup_port = "";
+var backup_ipaddr = "";
+var backup_lport = "";
+var backup_proto = "";
 
 function initial(){
 	show_menu();
@@ -62,6 +69,9 @@ function initial(){
 		document.getElementById('FTP_desc').style.display = "none";
 		document.form.vts_ftpport.parentNode.parentNode.style.display = "none";
 	}
+
+	//if(dualWAN_support && wans_mode == "lb")
+	//	document.getElementById("lb_note").style.display = "";
 }
 
 function isChange(){
@@ -80,6 +90,7 @@ function isChange(){
 }
 
 function applyRule(){
+	cancel_Edit();
 
 	if(parent.usb_support){
 		if(!validator.numberRange(document.form.vts_ftpport, 1, 65535)){
@@ -204,14 +215,15 @@ function showLANIPList(){
 	for(var i=0; i<clientList.length;i++){
 		var clientObj = clientList[clientList[i]];
 
-		if(clientObj.ip == "offline") clientObj.ip = "";
-		if(clientObj.name.length > 30) clientObj.name = clientObj.name.substring(0, 28) + "..";
+		if(clientObj.isOnline) {
+			if(clientObj.name.length > 30) clientObj.name = clientObj.name.substring(0, 28) + "..";
 
-		htmlCode += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP(\'';
-		htmlCode += clientObj.ip;
-		htmlCode += '\');"><strong>';
-		htmlCode += clientObj.ip + '</strong>&nbsp;&nbsp;(' + clientObj.name + ')';
-		htmlCode += '</strong></div></a><!--[if lte IE 6.5]><iframe class="hackiframe2"></iframe><![endif]-->';	
+			htmlCode += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP(\'';
+			htmlCode += clientObj.ip;
+			htmlCode += '\');"><strong>';
+			htmlCode += clientObj.ip + '</strong>&nbsp;&nbsp;(' + clientObj.name + ')';
+			htmlCode += '</strong></div></a><!--[if lte IE 6.5]><iframe class="hackiframe2"></iframe><![endif]-->';	
+		}
 	}
 
 	document.getElementById("ClientList_Block").innerHTML = htmlCode;
@@ -339,8 +351,18 @@ function addRow_Group(upper){
 		addRow(document.form.vts_ipaddr_x_0, 0);
 		addRow(document.form.vts_lport_x_0, 0);
 		addRow(document.form.vts_proto_x_0, 0);
+
 		document.form.vts_proto_x_0.value="TCP";
 		showvts_rulelist();
+
+		if (backup_desc != "") {
+			backup_desc = "";
+			backup_port = "";
+			backup_ipaddr = "";
+			backup_lport = "";
+			backup_proto = "";
+			document.getElementById('vts_rulelist_table').rows[rule_num-1].scrollIntoView();
+		}
 	}
 }
 
@@ -412,15 +434,45 @@ function check_multi_range(obj, mini, maxi, allow_range){
 
 
 function edit_Row(r){ 	
+	cancel_Edit();
+
 	var i=r.parentNode.parentNode.rowIndex;
-  	
-	document.form.vts_desc_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[0].innerHTML;
-	document.form.vts_port_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[1].innerHTML; 
+
+	if (document.getElementById('vts_rulelist_table').rows[i].cells[j].innerHTML.lastIndexOf("...") <0 ) {
+		document.form.vts_desc_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[0].innerHTML;
+	}else{
+		document.form.vts_desc_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[0].title;
+	}
+
+	if (document.getElementById('vts_rulelist_table').rows[i].cells[j].innerHTML.lastIndexOf("...") <0 ) {
+		document.form.vts_port_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[1].innerHTML;
+	}else{
+		document.form.vts_port_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[1].title;
+	}
+
 	document.form.vts_ipaddr_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[2].innerHTML; 
 	document.form.vts_lport_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[3].innerHTML;
 	document.form.vts_proto_x_0.value = document.getElementById('vts_rulelist_table').rows[i].cells[4].innerHTML;
-	
-  del_Row(r);	
+
+	backup_desc = document.form.vts_desc_x_0.value;
+	backup_port = document.form.vts_port_x_0.value;
+	backup_ipaddr = document.form.vts_ipaddr_x_0.value;
+	backup_lport = document.form.vts_lport_x_0.value;
+	backup_proto = document.form.vts_proto_x_0.value;
+
+	del_Row(r);
+	document.form.vts_desc_x_0.focus();
+}
+
+function cancel_Edit(){
+	if (backup_desc != "") {
+		document.form.vts_desc_x_0.value = backup_desc;
+		document.form.vts_port_x_0.value = backup_port;
+		document.form.vts_ipaddr_x_0.value = backup_ipaddr;
+		document.form.vts_lport_x_0.value = backup_lport;
+		document.form.vts_proto_x_0.value = backup_proto;
+		addRow_Group(128);
+	}
 }
 
 function del_Row(r){
@@ -483,7 +535,7 @@ function showvts_rulelist(){
 						}
 						
 				}
-				code +='<td width="14%"><!--input class="edit_btn" onclick="edit_Row(this);" value=""/-->';
+				code +='<td width="14%"><input class="edit_btn" onclick="edit_Row(this);" value=""/>';
 				code +='<input class="remove_btn" onclick="del_Row(this);" value=""/></td></tr>';
 		}
 	}
@@ -553,6 +605,7 @@ function changeBgColor(obj, num){
 		<div class="formfontdesc" style="margin-top:-10px;">
 			<a id="faq" href="" target="_blank" style="font-family:Lucida Console;text-decoration:underline;"><#menu5_3_4#>&nbspFAQ</a>
 		</div>
+		<div class="formfontdesc" id="lb_note" style="color:#FFCC00; display:none;"><#lb_note_portForwarding#></div>
 
 		<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable">
 					  <thead>

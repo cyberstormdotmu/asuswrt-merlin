@@ -227,7 +227,7 @@ function checkPasswdValid(obj){
             	<table width="80%" border="1" align="center" cellpadding="2" cellspacing="0" bordercolor="#7ea7bd" class="FormTable_table">
                 	<tr>
                   	<th width="100"><#AiDisk_Account#></th>
-                  	<th><#PPPConnection_Password_itemname#></th>
+                  	<th><#HSDPAConfig_Password_itemname#></th>
                   	<th width="50" ><#AiDisk_Read#></th>
                   	<th width="50" ><#AiDisk_Write#></th>
                 	</tr>
@@ -258,13 +258,11 @@ function checkPasswdValid(obj){
     
     <tr valign="bottom" align="center">
     	<td width="20%">
-    		<div class="apply_gen" style="margin-top:30px">
-  				<input type="button" id="prevButton" value="<#btn_pre#>" onclick="go_pre_page();" class="button_gen">
-  				<input type="submit" id="nextButton" value="<#btn_next#>" class="button_gen">  							
-        	<!--a href="javascript:go_pre_page();"><div class="titlebtn" align="center" style="margin-left:275px;_margin-left:137px;width:80px;"><span><#btn_pre#></span></div></a>
-        	<a href="javascript:passTheResult();"><div class="titlebtn" align="center" style="width:80px;"><span><#btn_next#></span></div></a-->
-        </div>	 
-      </td>
+		<div class="apply_gen" style="margin-top:30px">
+  			<input type="button" id="prevButton" value="<#CTL_prev#>" onclick="go_pre_page();" class="button_gen">
+			<input type="submit" id="nextButton" value="<#CTL_next#>" class="button_gen">
+		</div>	 
+	</td>
     </tr>
     <!-- end -->    
   </table>

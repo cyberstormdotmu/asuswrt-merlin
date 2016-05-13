@@ -17,8 +17,9 @@
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
+<script language="JavaScript" type="text/javascript" src="/form.js"></script>
 <style>
 .contentM_qis{
 	position:absolute;
@@ -32,6 +33,8 @@
 	margin-top: -450px;
 	width:340px;
 	height:160px;
+	box-shadow: 3px 3px 10px #000;
+	display:none;
 }
 </style>
 <script>
@@ -39,8 +42,8 @@
 <% wanlink(); %>
 <% secondary_wanlink(); %>
 window.onresize = function() {
-	if(document.getElementById("edit_sr_block").style.display == "") {
-		cal_panel_block("edit_sr_block");
+	if(document.getElementById("edit_sr_block").style.display == "block") {
+		cal_panel_block("edit_sr_block", 0.35);
 	}
 }
 var pptpd_clientlist_array_ori = '<% nvram_char_to_ascii("","pptpd_clientlist"); %>';
@@ -49,6 +52,18 @@ var pptpd_connected_clients = [];
 var pptpd_sr_rulelist_array_ori = '<% nvram_char_to_ascii("","pptpd_sr_rulelist"); %>';
 var pptpd_sr_rulelist_array = decodeURIComponent(pptpd_sr_rulelist_array_ori);
 var pptpd_sr_edit_username = "";
+
+var max_shift = "";	/*MODELDEP (include dict #PPTP_desc2# #vpn_max_clients# #vpn_maximum_clients#) : 
+				RT-AC5300/RT-AC3200/RT-AC3100/RT-AC88U/RT-AC87U/RT-AC68U/RT-AC66U/RT-AC56U/RT-N66U/RT-N18U */
+if(based_modelid == "RT-AC5300" || based_modelid == "RT-AC3200" || based_modelid == "RT-AC3100" ||
+		based_modelid == "RT-AC88U" || based_modelid == "RT-AC87U" || based_modelid == "RT-AC68U" ||
+		based_modelid == "RT-AC66U" || based_modelid == "RT-AC56U" ||
+		based_modelid == "RT-N66U" || based_modelid == "RT-N18U"){
+	max_shift = parseInt("29");
+}
+else{
+	max_shift = parseInt("9");
+}
 
 function initial(){
 	var dualwan_mode = '<% nvram_get("wans_mode"); %>';
@@ -66,7 +81,7 @@ function initial(){
 		var wan0_ipaddr = wanlink_ipaddr();
 		var wan1_ipaddr = secondary_wanlink_ipaddr();		document.getElementById("wan_ctrl").style.display = "none";
 		document.getElementById("dualwan_ctrl").style.display = "";	
-		document.getElementById("dualwan_ctrl").innerHTML = '<#PPTP_desc2#> <span class="formfontdesc">Primary WAN IP : ' + wan0_ipaddr + ' </sapn><span class="formfontdesc">Secondary WAN IP : ' + wan1_ipaddr + '</sapn>';
+		document.getElementById("dualwan_ctrl").innerHTML = "<#PPTP_desc2#> <span class=\"formfontdesc\">Primary WAN IP : " + wan0_ipaddr + " </sapn><span class=\"formfontdesc\">Secondary WAN IP : " + wan1_ipaddr + "</sapn>";
 		//check DUT is belong to private IP. //realip doesn't support lb
 		if(validator.isPrivateIP(wan0_ipaddr) && validator.isPrivateIP(wan1_ipaddr)){
 			document.getElementById("privateIP_notes").style.display = "";
@@ -416,38 +431,13 @@ function addRow_Group(upper){
 	}
 }
 
-function cal_panel_block(obj) {
-	var blockmarginLeft;
-	if(window.innerWidth) {
-		winWidth = window.innerWidth;
-	}
-	else if((document.body) && (document.body.clientWidth)) {
-		winWidth = document.body.clientWidth;
-	}
-		
-	if(document.documentElement  && document.documentElement.clientHeight && document.documentElement.clientWidth) {
-		winWidth = document.documentElement.clientWidth;
-	}
-		
-	if(winWidth >1050) {	
-		winPadding = (winWidth - 1050) / 2;	
-		winWidth = 1105;
-		blockmarginLeft = (winWidth * 0.35) + winPadding;
-	}
-	else if(winWidth <= 1050) {
-		blockmarginLeft = (winWidth) * 0.35 + document.body.scrollLeft;	
-	}
-
-	document.getElementById(obj).style.marginLeft = blockmarginLeft + "px";
-}
-
 function edit_Row(userName) {
 	pptpd_sr_edit_username = userName;
 	document.form.pptpd_sr_ipaddr.value = "";
 	document.form.pptpd_sr_netmask.value = "";
 
 	$("#edit_sr_block").fadeIn(300);
-	cal_panel_block("edit_sr_block");
+	cal_panel_block("edit_sr_block", 0.35);
 
 	var pptpd_sr_rulelist_row = pptpd_sr_rulelist_array.split("<");
 	for(var i = 1; i < pptpd_sr_rulelist_row.length; i += 1) {
@@ -687,7 +677,7 @@ function setEnd() {
 	var pptpd_clients_start_ip = parseInt(document.form._pptpd_clients_start.value.split(".")[3]);														
 	document.getElementById("pptpd_subnet").innerHTML = pptpd_clients_subnet;
 
-	end = pptpd_clients_start_ip + 9;
+	end = pptpd_clients_start_ip + max_shift;
 	if(end > 254) {
 		end = 254;
 	}
@@ -712,7 +702,7 @@ function check_pptpd_clients_range(){
 		return false;
 	}
 
-	if( (pptpd_clients_end_ip - pptpd_clients_start_ip) > 9 ) {
+	if( (pptpd_clients_end_ip - pptpd_clients_start_ip) > max_shift ) {
 		alert("<#vpn_max_clients#>");
 		document.form._pptpd_clients_start.focus();
 		document.form._pptpd_clients_start.select();
@@ -884,8 +874,8 @@ function check_vpn_conflict() {		//if conflict with LAN ip & DHCP ip pool & stat
 											</thead>								
 											<tr>
 												<th><#PPPConnection_x_WANLink_itemname#></th>
-												<th><#PPPConnection_UserName_itemname#></th>
-												<th><#PPPConnection_Password_itemname#></th>
+												<th><#HSDPAConfig_Username_itemname#></th>
+												<th><#HSDPAConfig_Password_itemname#></th>
 												<th><#list_add_delete#></th>
 												<th><#pvccfg_edit#></th>
 											</tr>			  
@@ -999,7 +989,7 @@ function check_vpn_conflict() {		//if conflict with LAN ip & DHCP ip pool & stat
 		</td>
 	</tr>
 </table>
-<div id="edit_sr_block" class="contentM_qis" style="box-shadow: 3px 3px 10px #000;display:none;">
+<div id="edit_sr_block" class="contentM_qis">
 	<table width="95%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable" style="margin-top:8px;">
 		<thead>
 			<tr>

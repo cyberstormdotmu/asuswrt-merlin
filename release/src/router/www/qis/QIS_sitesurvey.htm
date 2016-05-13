@@ -6,7 +6,7 @@
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
 <link rel="stylesheet" type="text/css" href="/form_style.css">
 <link rel="stylesheet" type="text/css" href="qis_style.css">
-<script language="JavaScript" type="text/javascript" src="/jquery.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/general.js"></script>
 <script type="text/javascript" src="/help.js"></script>
 <script type="text/javascript" src="/qis/QISMobilePlugin.js"></script>
@@ -26,7 +26,7 @@ var profile = function(_profile){
 	if(_profile == null)
 		_profile = ["", "", "", "", "", "", "", "", ""];
 	var band_s = parseInt(_profile[2]);
-	this.band = based_modelid == "RT-AC3200" ? ((band_s >= 1 && band_s <= 14) ? "2.4GHz": ((band_s >= 36 && band_s <= 48) ? "5GHz-1":((band_s >= 149 && band_s <= 165) ? "5GHz-2":"undefine"))):_profile[0] == "2G" ? "2.4GHz": "5GHz",
+	this.band = (based_modelid == "RT-AC3200" || based_modelid == "RT-AC5300") ? ((band_s >= 1 && band_s <= 14) ? "2.4GHz": ((band_s >= 36 && band_s <= 48) ? "5GHz-1":((band_s >= 149 && band_s <= 165) ? "5GHz-2":"undefine"))):_profile[0] == "2G" ? "2.4GHz": "5GHz",
 	this.ssid = decodeURIComponent(_profile[1]),
 	this.channel = _profile[2],
 	this.auth = _profile[3],
@@ -59,7 +59,7 @@ var localAP = function(ssid, key){
 
 var wlcKey = function(obj){
 
-	if(based_modelid == "RT-AC3200"){
+	if(based_modelid == "RT-AC3200" || based_modelid == "RT-AC5300"){
 		if(obj.band == "2.4GHz" || obj.band == "0")
 			this.band = "0";
 		else if (obj.band == "5GHz-1" || obj.band == "1")
@@ -591,7 +591,7 @@ var bindEvent = {
 			var initRow = '<tr class="inputRow" style="display:none;background-color:#708789;"><td style="height:50px;" colspan="5"><table width="100%"><tr>';
 			var connectedHint = '<td style="border:0px;"><span style="color:#FFCC00;"><#APSurvey_msg_connected#></span></td>';
 			var unEncrypt = '<td style="border:0px;"><span style="color:#FFCC00;"><#APSurvey_msg_connect_open_wlan#></span></td>';
-			var unSupport = '<td style="border:0px;"><span style="color:#FFCC00;">Non supported Authentication Method.</span></td>';
+			var unSupport = '<td style="border:0px;"><span style="color:#FFCC00;"><#APSurvey_msg_non_support_Auth#></span></td>';	/*Non supported Authentication Method.*/
 			var networkKey = '<td style="border:0px;"><span style="color:#FFFFFF;"><#Network_key#>:</span><input type="password" id="thekey_tmp" class="input_25_table" style="padding-left:3px;margin-left:5px;width:200px;" autocomplete="off" autocorrect="off" autocapitalize="off"><input type="checkbox" onclick="pass_checked(this, document.getElementById(\'thekey_tmp\'));"><span style="color:#FFF"><#QIS_show_pass#></span></td>';
 			var connectBtn = '<td style="border:0px;text-align:right"><input style="margin-left:10px;" id="connect_btn" type="button" value="<#CTL_Add_enrollee#>" onclick="btnAction.saveWlcVar('+ bindEvent.idx +', false)" class="button_gen"></td></tr>';
 			var wep_auth = "<tr><td style=\"border:0px;\"><span style=\"margin-left:5px;color:#FFFFFF;\"><#WLANConfig11b_AuthenticationMethod_itemname#></span><select id=\"thekey_wep_method_tmp\" class=\"input_option\" style=\"margin-left:5px;\"><option value=\"open\" selected>open</option><option value=\"shared\">shared</option></select>";
@@ -924,7 +924,7 @@ function QKInternet_load_body(){
 	if(!parent.band5g_support)
 		document.getElementById('wl_unit_field').style.display = "none";
 
-	if(based_modelid == "RT-AC3200"){
+	if(based_modelid == "RT-AC3200" || based_modelid == "RT-AC5300"){
 		parent.regen_band(document.form.wlc_band_manual);
 	}
 }
@@ -997,7 +997,7 @@ function QKInternet_load_body(){
 				<th onclick="sorter.addBorder(this);sorter.doSorter(1, 'str');" style="cursor:pointer;"><#Wireless_name#></th>
 				<th onclick="sorter.addBorder(this);sorter.doSorter(2, 'num');" width="15%" style="text-align:center;cursor:pointer;"><#WLANConfig11b_Channel_itemname#></th>
 				<th onclick="sorter.addBorder(this);sorter.doSorter(3, 'str');" width="20%" style="cursor:pointer;"><#QIS_finish_wireless_item2#></th>
-				<th onclick="sorter.addBorder(this);sorter.doSorter(0, 'str');" width="10%" style="text-align:center;cursor:pointer;">Band</th>
+				<th onclick="sorter.addBorder(this);sorter.doSorter(0, 'str');" width="10%" style="text-align:center;cursor:pointer;"><#Interface#></th>
 				<th onclick="sorter.addBorder(this);sorter.doSorter(5, 'num');" width="10%" id="sigTh" style="border-bottom: 1px solid #FC0;text-align:center;cursor:pointer;"><#Radio#></th>
 			</table>
 		</div>
@@ -1055,7 +1055,7 @@ function QKInternet_load_body(){
 						<option value="psk2">WPA2-Personal</option>
 		  		</select>
 					<div id="wl_nmode_hint_manual" style="margin-top:5px;color:#FC0;">
-						Under WEP or WPA-Personal+TKIP encryption, the maximum transmission rate of <#Web_Title2#> is 54Mbps. Please change to WPA2-Personal.
+						<#WLANConfig11n_automode_limition_hint#> <#WLANConfig11n_automode_limition_hint1#><!--Please change to WPA2-Personal.-->
 					</div>
 				</td>
 	  	</tr>

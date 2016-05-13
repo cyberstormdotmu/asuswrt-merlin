@@ -17,7 +17,7 @@
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type='text/javascript'>var fanctrl_info = [<% get_fanctrl_info(); %>];
 curr_coreTmp_2 = "<% sysinfo("temperature.2"); %>".replace("&deg;C", "");
 curr_coreTmp_5 = "<% sysinfo("temperature.5"); %>".replace("&deg;C", ""); 
@@ -128,7 +128,7 @@ function changeTempUnit(num){
 								<tr bgcolor="#4D595D" style="height:10px">
 								  <td valign="top">
 									  <div>&nbsp;</div>
-									  <div class="formfonttitle"><#menu5_6_adv#> - Performance tuning</div>
+									  <div class="formfonttitle"><#menu5_6#> - Performance tuning</div>
 									  <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 									  <!--div class="formfontdesc"><#PerformaceTuning_desc#></div-->
 									</td>

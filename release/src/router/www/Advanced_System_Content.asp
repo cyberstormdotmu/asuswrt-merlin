@@ -88,6 +88,26 @@ function initial(){
 	show_menu();
 	show_http_clientlist();
 	display_spec_IP(document.form.http_client.value);
+
+	if(reboot_schedule_support){
+		document.form.reboot_date_x_Sun.checked = getDateCheck(document.form.reboot_schedule.value, 0);
+		document.form.reboot_date_x_Mon.checked = getDateCheck(document.form.reboot_schedule.value, 1);
+		document.form.reboot_date_x_Tue.checked = getDateCheck(document.form.reboot_schedule.value, 2);
+		document.form.reboot_date_x_Wed.checked = getDateCheck(document.form.reboot_schedule.value, 3);
+		document.form.reboot_date_x_Thu.checked = getDateCheck(document.form.reboot_schedule.value, 4);
+		document.form.reboot_date_x_Fri.checked = getDateCheck(document.form.reboot_schedule.value, 5);
+		document.form.reboot_date_x_Sat.checked = getDateCheck(document.form.reboot_schedule.value, 6);
+		document.form.reboot_time_x_hour.value = getrebootTimeRange(document.form.reboot_schedule.value, 0);
+		document.form.reboot_time_x_min.value = getrebootTimeRange(document.form.reboot_schedule.value, 1);
+		document.getElementById('reboot_schedule_enable_tr').style.display = "";
+		hide_reboot_option('<% nvram_get("reboot_schedule_enable"); %>');
+	}
+	else{
+		document.getElementById('reboot_schedule_enable_tr').style.display = "none";
+		document.getElementById('reboot_schedule_date_tr').style.display = "none";
+		document.getElementById('reboot_schedule_time_tr').style.display = "none";
+	}
+
 	corrected_timezone();
 	load_timezones();
 	parse_dstoffset();
@@ -114,18 +134,43 @@ function initial(){
 	}	
 	
 	if(wifi_tog_btn_support || wifi_hw_sw_support || sw_mode == 2 || sw_mode == 4){		// wifi_tog_btn && wifi_hw_sw && hide WPS button behavior under repeater mode
-			document.form.btn_ez_radiotoggle[0].disabled = true;
-			document.form.btn_ez_radiotoggle[1].disabled = true;
-			document.getElementById('btn_ez_radiotoggle_tr').style.display = "none";
-	}else{
-			document.getElementById('btn_ez_radiotoggle_tr').style.display = "";
-	}	
-	if(cfg_wps_btn_support){
-		document.getElementById('btn_ez_mode_tr').style.display = "";
-	}else{
-		document.form.btn_ez_mode.disabled = true;
-		document.getElementById('btn_ez_mode_tr').style.display = "none";
+			if(cfg_wps_btn_support){
+				document.getElementById('turn_WPS').style.display = "";
+				document.form.btn_ez_radiotoggle[1].disabled = true;
+				document.getElementById('turn_WiFi').style.display = "none";
+				document.getElementById('turn_WiFi_str').style.display = "none";
+				document.getElementById('turn_LED').style.display = "";
+				if(document.form.btn_ez_radiotoggle[2].checked == false)
+					document.form.btn_ez_radiotoggle[0].checked = true;
+			}
+			else{
+				document.form.btn_ez_radiotoggle[0].disabled = true;
+				document.form.btn_ez_radiotoggle[1].disabled = true;
+				document.form.btn_ez_radiotoggle[2].disabled = true;
+				document.getElementById('btn_ez_radiotoggle_tr').style.display = "none";
+			}
 	}
+	else{
+			
+			document.getElementById('btn_ez_radiotoggle_tr').style.display = "";
+			if(cfg_wps_btn_support){
+				document.getElementById('turn_WPS').style.display = "";
+				document.getElementById('turn_WiFi').style.display = "";
+				document.getElementById('turn_LED').style.display = "";
+				if(document.form.btn_ez_radiotoggle[1].checked == false && document.form.btn_ez_radiotoggle[2].checked == false)
+					document.form.btn_ez_radiotoggle[0].checked = true;
+			}
+			else{
+				document.getElementById('turn_WPS').style.display = "";
+				document.getElementById('turn_WiFi').style.display = "";
+				document.getElementById('turn_LED').disabled = true;
+				document.getElementById('turn_LED').style.display = "none";
+				document.getElementById('turn_LED_str').style.display = "none";
+				if(document.form.btn_ez_radiotoggle[1].checked == false)
+					document.form.btn_ez_radiotoggle[0].checked = true;		
+			}
+	}
+	
 	if(sw_mode != 1){
 		document.getElementById('misc_http_x_tr').style.display ="none";
 		hideport(0);
@@ -161,7 +206,6 @@ function initial(){
 		document.form.telnetd_enable[1].disabled = false;
 	}	
 
-	toggle_jffs_visibility('<% nvram_get("jffs2_enable"); %>');
 }
 
 var time_zone_tmp="";
@@ -191,6 +235,10 @@ function applyRule(){
 			alert("<#JS_fieldblank#>");
 			document.form.http_client_ip_x_0.focus();
 			return false;
+		}
+
+		if(document.form.http_clientlist.value != '<% nvram_get("http_clientlist"); %>'){
+			document.form.action_script.value = "restart_time;restart_httpd";
 		}
 
 		if(document.form.http_passwd2.value.length > 0){
@@ -228,7 +276,7 @@ function applyRule(){
 				|| document.form.misc_httpport_x.value != '<% nvram_get("misc_httpport_x"); %>'
 				|| document.form.misc_httpsport_x.value != '<% nvram_get("misc_httpsport_x"); %>'
 			){
-			document.form.action_script.value = "restart_time;restart_change_https";
+			document.form.action_script.value = "restart_time;restart_httpd";
 			if(document.form.http_enable.value == "0"){	//HTTP
 				if(isFromWAN)
 					document.form.flag.value = "http://" + location.hostname + ":" + document.form.misc_httpport_x.value;
@@ -255,6 +303,24 @@ function applyRule(){
 				}
 			}   
 		}
+		
+		if(document.form.btn_ez_radiotoggle[1].disabled == false && document.form.btn_ez_radiotoggle[1].checked == true){
+				document.form.btn_ez_radiotoggle.value=1;
+				document.form.btn_ez_mode.value=0;				
+		}
+		else if(document.form.btn_ez_radiotoggle[2].disabled == false && document.form.btn_ez_radiotoggle[2].checked == true){
+				document.form.btn_ez_radiotoggle.value=0;
+				document.form.btn_ez_mode.value=1;				
+		}
+		else{		
+				document.form.btn_ez_radiotoggle.value=0;
+				document.form.btn_ez_mode.value=0;				
+		}
+		
+		if(reboot_schedule_support == 1){               
+			updateDateTime();
+		}
+
 		showLoading();
 		document.form.submit();
 	}
@@ -307,36 +373,58 @@ function validForm(){
 		}
 	}
 
+	if(document.form.http_passwd2.value.length > 0 && document.form.http_passwd2.value.length < 5){
+		showtext(document.getElementById("alert_msg2"),"* <#JS_short_password#>");
+		document.form.http_passwd2.focus();
+		document.form.http_passwd2.select();
+		return false;
+	}	
+
 	if(document.form.http_passwd2.value != document.form.v_password2.value){
-		showtext(document.getElementById("alert_msg2"),"*<#File_Pop_content_alert_desc7#>");
+		showtext(document.getElementById("alert_msg2"),"* <#File_Pop_content_alert_desc7#>");
 		if(document.form.http_passwd2.value.length <= 0){
 			document.form.http_passwd2.focus();
 			document.form.http_passwd2.select();
 		}else{
 			document.form.v_password2.focus();
 			document.form.v_password2.select();
-		}	
-
+		}
 		return false;
 	}
 
 	if(is_KR_sku){		/* MODELDEP by Territory Code */
 		if(document.form.http_passwd2.value.length > 0 || document.form.http_passwd2.value.length > 0){
-				if(!validator.string_KR(document.form.http_passwd2)){
-						document.form.http_passwd2.focus();
-						document.form.http_passwd2.select();
-						return false;
-				}
+			if(!validator.string_KR(document.form.http_passwd2)){
+				document.form.http_passwd2.focus();
+				document.form.http_passwd2.select();
+				return false;
+			}
 		}
 	}
 	else{
 		if(!validator.string(document.form.http_passwd2)){
-				document.form.http_passwd2.focus();
-				document.form.http_passwd2.select();
-				return false;
+			document.form.http_passwd2.focus();
+			document.form.http_passwd2.select();
+			return false;
 		}	
 	}	
+
+	if(document.form.http_passwd2.value == '<% nvram_default_get("http_passwd"); %>'){	
+		showtext(document.getElementById("alert_msg2"),"* <#QIS_adminpass_confirm0#>");
+		document.form.http_passwd2.focus();
+		document.form.http_passwd2.select();
+		return false;
+	}	
 	
+	//confirm common string combination	#JS_common_passwd#
+	var is_common_string = check_common_string(document.form.http_passwd2.value, "httpd_password");
+	if(document.form.http_passwd2.value.length > 0 && is_common_string){
+			if(confirm("<#JS_common_passwd#>")){
+				document.form.http_passwd2.focus();
+				document.form.http_passwd2.select();
+				return false;	
+			}	
+	}
 
 	if(!validator.ipAddrFinal(document.form.log_ipaddr, 'log_ipaddr')
 			|| !validator.string(document.form.ntp_server0)
@@ -350,18 +438,15 @@ function validForm(){
 			&& document.form.dst_start_d.value == document.form.dst_end_d.value){
 		alert("<#FirewallConfig_URLActiveTime_itemhint4#>");	//At same day
 		return false;
-	}
+	}	
 
-	if(document.form.http_passwd2.value.length > 0)
-		alert("<#File_Pop_content_alert_desc10#>");
+	if (HTTPS_support && (document.form.http_enable[0].selected != true) && !validator.range(document.form.https_lanport, 1024, 65535) && !tmo_support)
+		return false;
 		
 	if (document.form.misc_http_x[0].checked) {
 		if (!validator.range(document.form.misc_httpport_x, 1024, 65535))
 			return false;
 	
-		if (HTTPS_support && !validator.range(document.form.https_lanport, 1024, 65535) && !tmo_support)
-			return false;
-
 		if (HTTPS_support && !validator.range(document.form.misc_httpsport_x, 1024, 65535))
 			return false;
 	}
@@ -406,6 +491,17 @@ function validForm(){
 	else if(!validator.rangeAllowZero(document.form.http_autologout, 10, 999, '<% nvram_get("http_autologout"); %>'))
 		return false;
 
+	if(reboot_schedule_support == 1){
+		if(document.form.reboot_schedule_enable[0].checked == 1){
+			if(!validate_timerange(document.form.reboot_time_x_hour, 0)
+				|| !validate_timerange(document.form.reboot_time_x_min, 1))
+				return false;
+		}
+	}
+
+	if(document.form.http_passwd2.value.length > 0)	//password setting changed
+		alert("<#File_Pop_content_alert_desc10#>");
+		
 	return true;
 }
 
@@ -936,13 +1032,41 @@ function display_spec_IP(flag){
 	}
 }
 
-function toggle_jffs_visibility(state){
-	var visibility = ( state == 1 ? "" : "none");
 
-	document.getElementById('jffs2_format_tr').style.display = visibility;
-	document.getElementById('jffs2_scripts_tr').style.display = visibility;
+function hide_reboot_option(flag){
+	document.getElementById("reboot_schedule_date_tr").style.display = (flag == 1) ? "" : "none";
+	document.getElementById("reboot_schedule_time_tr").style.display = (flag == 1) ? "" : "none";
 }
 
+
+function getrebootTimeRange(str, pos)
+{
+	if (pos == 0)
+		return str.substring(7,9);
+	else if (pos == 1)
+		return str.substring(9,11);
+}
+
+function setrebootTimeRange(rd, rh, rm)
+{
+	return(rd.value+rh.value+rm.value);
+}
+
+function updateDateTime()
+{
+	document.form.reboot_schedule.value = setDateCheck(
+	document.form.reboot_date_x_Sun,
+	document.form.reboot_date_x_Mon,
+	document.form.reboot_date_x_Tue,
+	document.form.reboot_date_x_Wed,
+	document.form.reboot_date_x_Thu,
+	document.form.reboot_date_x_Fri,
+	document.form.reboot_date_x_Sat);
+	document.form.reboot_schedule.value = setrebootTimeRange(
+	document.form.reboot_schedule,
+	document.form.reboot_time_x_hour,
+	document.form.reboot_time_x_min)
+}
 
 </script>
 </head>
@@ -970,6 +1094,9 @@ function toggle_jffs_visibility(state){
 <input type="hidden" name="time_zone_dstoff" value="<% nvram_get("time_zone_dstoff"); %>">
 <input type="hidden" name="http_passwd" value="" disabled>
 <input type="hidden" name="http_clientlist" value="<% nvram_get("http_clientlist"); %>">
+<input type="hidden" name="btn_ez_mode" value="<% nvram_get("btn_ez_mode"); %>">
+<input type="hidden" name="reboot_schedule" value="<% nvram_get_x("","reboot_schedule"); %>">
+<input type="hidden" name="reboot_schedule_enable" value="<% nvram_get_x("","reboot_schedule_enable"); %>">
 
 <table class="content" align="center" cellpadding="0" cellspacing="0">
   <tr>
@@ -992,7 +1119,7 @@ function toggle_jffs_visibility(state){
 	<tr>
 		<td bgcolor="#4D595D" valign="top">
 			<div>&nbsp;</div>
-			<div class="formfonttitle"><#menu5_6_adv#> - <#menu5_6_2#></div>
+			<div class="formfonttitle"><#menu5_6#> - <#menu5_6_2#></div>
 			<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 			<div class="formfontdesc"><#Syste_title#></div>
 
@@ -1005,16 +1132,16 @@ function toggle_jffs_visibility(state){
 				<tr>
 				  <th width="40%"><#Router_Login_Name#></th>
 					<td>
-						<div><input type="text" id="http_username" name="http_username" tabindex="1" autocomplete="off" style="height:25px;" class="input_15_table" maxlength="20" autocorrect="off" autocapitalize="off"><br/><span id="alert_msg1" style="color:#FC0;margin-left:8px;"></span></div>
+						<div><input type="text" id="http_username" name="http_username" tabindex="1" autocomplete="off" style="height:25px;" class="input_18_table" maxlength="20" autocorrect="off" autocapitalize="off"><br/><span id="alert_msg1" style="color:#FC0;margin-left:8px;"></span></div>
 					</td>
 				</tr>
 
 				<tr>
 					<th width="40%"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(11,4)"><#PASS_new#></a></th>
 					<td>
-						<input type="password" autocomplete="off" name="http_passwd2" tabindex="2" onKeyPress="return validator.isString(this, event);" onkeyup="chkPass(this.value, 'http_passwd');" onpaste="return false;" class="input_15_table" maxlength="16" onBlur="clean_scorebar(this);" autocorrect="off" autocapitalize="off"/>
+						<input type="password" autocomplete="off" name="http_passwd2" tabindex="2" onKeyPress="return validator.isString(this, event);" onkeyup="chkPass(this.value, 'http_passwd');" onpaste="return false;" class="input_18_table" maxlength="16" onBlur="clean_scorebar(this);" autocorrect="off" autocapitalize="off"/>
 						&nbsp;&nbsp;
-						<div id="scorebarBorder" style="margin-left:140px; margin-top:-25px; display:none;" title="<#LANHostConfig_x_Password_itemSecur#>">
+						<div id="scorebarBorder" style="margin-left:180px; margin-top:-25px; display:none;" title="<#LANHostConfig_x_Password_itemSecur#>">
 							<div id="score"></div>
 							<div id="scorebar">&nbsp;</div>
 						</div>            
@@ -1024,8 +1151,8 @@ function toggle_jffs_visibility(state){
 				<tr>
 					<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(11,4)"><#PASS_retype#></a></th>
 					<td>
-						<input type="password" autocomplete="off" name="v_password2" tabindex="3" onKeyPress="return validator.isString(this, event);" onpaste="return false;" class="input_15_table" maxlength="16" autocorrect="off" autocapitalize="off"/>
-						<div style="margin:-25px 0px 5px 135px;"><input type="checkbox" name="show_pass_1" onclick="pass_checked(document.form.http_passwd2);pass_checked(document.form.v_password2);"><#QIS_show_pass#></div>
+						<input type="password" autocomplete="off" name="v_password2" tabindex="3" onKeyPress="return validator.isString(this, event);" onpaste="return false;" class="input_18_table" maxlength="16" autocorrect="off" autocapitalize="off"/>
+						<div style="margin:-25px 0px 5px 175px;"><input type="checkbox" name="show_pass_1" onclick="pass_checked(document.form.http_passwd2);pass_checked(document.form.v_password2);"><#QIS_show_pass#></div>
 						<span id="alert_msg2" style="color:#FC0;margin-left:8px;"></span>
 					
 					</td>
@@ -1037,26 +1164,19 @@ function toggle_jffs_visibility(state){
 						<td colspan="2">Persistent JFFS2 partition</td>
 					</tr>
 				</thead>
-				<!-- tr>
-					<th>Enable JFFS partition</th>
-					<td>
-						<input type="radio" name="jffs2_enable" class="input" value="1" onclick="toggle_jffs_visibility(1);" <% nvram_match("jffs2_enable", "1", "checked"); %>><#checkbox_Yes#>
-						<input type="radio" name="jffs2_enable" class="input" value="0" onclick="toggle_jffs_visibility(0);" <% nvram_match("jffs2_enable", "0", "checked"); %>><#checkbox_No#>
-					</td>
-				</tr -->
-				<tr id="jffs2_format_tr">
+				<tr>
 					<th>Format JFFS partition at next boot</th>
-    				<td>
-    					<input type="radio" name="jffs2_format" class="input" value="1" <% nvram_match("jffs2_format", "1", "checked"); %>><#checkbox_Yes#>
-					<input type="radio" name="jffs2_format" class="input" value="0" <% nvram_match("jffs2_format", "0", "checked"); %>><#checkbox_No#>
+					<td>
+						<input type="radio" name="jffs2_format" class="input" value="1" <% nvram_match("jffs2_format", "1", "checked"); %>><#checkbox_Yes#>
+						<input type="radio" name="jffs2_format" class="input" value="0" <% nvram_match("jffs2_format", "0", "checked"); %>><#checkbox_No#>
 					</td>
 				</tr>
-				<tr id="jffs2_scripts_tr">
+				<tr>
 					<th>Enable JFFS custom scripts and configs</th>
 					<td>
 						<input type="radio" name="jffs2_scripts" class="input" value="1" <% nvram_match("jffs2_scripts", "1", "checked"); %>><#checkbox_Yes#>
 						<input type="radio" name="jffs2_scripts" class="input" value="0" <% nvram_match("jffs2_scripts", "0", "checked"); %>><#checkbox_No#>
-						</td>
+					</td>
 				</tr>
 			</table>
 			<table id="ssh_table" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable" style="margin-top:8px;">
@@ -1118,7 +1238,49 @@ function toggle_jffs_visibility(state){
 					</td>
 				</tr>
 			</table>
-			
+	
+			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable" style="margin-top:8px;">
+				<thead>
+					<tr>
+					  <td colspan="2">Logging</td>
+					</tr>
+				</thead>
+				<tr>
+					<th><a class="hintstyle"  href="javascript:void(0);" onClick="openHint(11,1)"><#LANHostConfig_x_ServerLogEnable_itemname#></a></th>
+					<td><input type="text" maxlength="15" class="input_15_table" name="log_ipaddr" value="<% nvram_get("log_ipaddr"); %>" onKeyPress="return validator.isIPAddr(this, event)" autocorrect="off" autocapitalize="off"></td>
+				</tr>
+				<tr>
+					<th>Default message log level</th>
+					<td>
+						<select name="message_loglevel" class="input_option">
+							<option value="0" <% nvram_match("message_loglevel", "0", "selected"); %>>emergency</option>
+							<option value="1" <% nvram_match("message_loglevel", "1", "selected"); %>>alert</option>
+							<option value="2" <% nvram_match("message_loglevel", "2", "selected"); %>>critical</option>
+							<option value="3" <% nvram_match("message_loglevel", "3", "selected"); %>>error</option>
+							<option value="4" <% nvram_match("message_loglevel", "4", "selected"); %>>warning</option>
+							<option value="5" <% nvram_match("message_loglevel", "5", "selected"); %>>notice</option>
+							<option value="6" <% nvram_match("message_loglevel", "6", "selected"); %>>info</option>
+							<option value="7" <% nvram_match("message_loglevel", "7", "selected"); %>>debug</option>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th>Log only messages more urgent than</th>
+					<td>
+						<select name="log_level" class="input_option">
+							<option value="1" <% nvram_match("log_level", "1", "selected"); %>>alert</option>
+							<option value="2" <% nvram_match("log_level", "2", "selected"); %>>critical</option>
+							<option value="3" <% nvram_match("log_level", "3", "selected"); %>>error</option>
+							<option value="4" <% nvram_match("log_level", "4", "selected"); %>>warning</option>
+							<option value="5" <% nvram_match("log_level", "5", "selected"); %>>notice</option>
+							<option value="6" <% nvram_match("log_level", "6", "selected"); %>>info</option>
+							<option value="7" <% nvram_match("log_level", "7", "selected"); %>>debug</option>
+							<option value="8" <% nvram_match("log_level", "8", "selected"); %>>all</option>
+						</select>
+					</td>
+				</tr>
+			</table>
+		
 			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable" style="margin-top:8px;">
 				<thead>
 					<tr>
@@ -1128,23 +1290,36 @@ function toggle_jffs_visibility(state){
 				<tr id="btn_ez_radiotoggle_tr">
 					<th><#WPS_btn_behavior#></th>
 					<td>
-						<input type="radio" name="btn_ez_radiotoggle" class="input" value="1" <% nvram_match_x("", "btn_ez_radiotoggle", "1", "checked"); %>><#WPS_btn_toggle#>
-						<input type="radio" name="btn_ez_radiotoggle" class="input" value="0" <% nvram_match_x("", "btn_ez_radiotoggle", "0", "checked"); %>><#WPS_btn_actWPS#>
+						<input type="radio" name="btn_ez_radiotoggle" id="turn_WPS" class="input" style="display:none;" value="0"><label for="turn_WPS"><#WPS_btn_actWPS#></label>
+						<input type="radio" name="btn_ez_radiotoggle" id="turn_WiFi" class="input" style="display:none;" value="1" <% nvram_match_x("", "btn_ez_radiotoggle", "1", "checked"); %>><label for="turn_WiFi" id="turn_WiFi_str"><#WPS_btn_toggle#></label>
+						<input type="radio" name="btn_ez_radiotoggle" id="turn_LED" class="input" style="display:none;" value="0" <% nvram_match_x("", "btn_ez_mode", "1", "checked"); %>><label for="turn_LED" id="turn_LED_str">Turn LED On/Off</label>
 					</td>
-				</tr>
-				<tr id="btn_ez_mode_tr">
-					<th><#WPS_btn_behavior#></th>
-					<td>
-						<select name="btn_ez_mode" class="input_option">
-							<option value="0" <% nvram_match("btn_ez_mode", "0", "selected"); %>><#WPS_btn_actWPS#></option>
-							<option value="1" <% nvram_match("btn_ez_mode", "1", "selected"); %>>Turn LED On/Off</option>
-						</select>
-					</td>
-				</tr>
-				<tr>
-					<th><a class="hintstyle"  href="javascript:void(0);" onClick="openHint(11,1)"><#LANHostConfig_x_ServerLogEnable_itemname#></a></th>
-					<td><input type="text" maxlength="15" class="input_15_table" name="log_ipaddr" value="<% nvram_get("log_ipaddr"); %>" onKeyPress="return validator.isIPAddr(this, event)" autocorrect="off" autocapitalize="off"></td>
-				</tr>
+				</tr>				
+	                            <tr id="reboot_schedule_enable_tr">
+                                        <th width="40%" align="right">Enable Reboot Schedule</th>
+                                        <td width="300"><input type="radio" value="1" name="reboot_schedule_enable"  onClick="hide_reboot_option(1);return change_common_radio(this, 'LANHostConfig', 'reboot_schedule_enable', '1')" <% nvram_match_x("LANHostConfig","reboot_schedule_enable", "1", "checked"); %>><#checkbox_Yes#>
+                                        <input type="radio" value="0" name="reboot_schedule_enable"  onClick="hide_reboot_option(0);return change_common_radio(this, 'LANHostConfig', 'reboot_schedule_enable', '0')" <% nvram_match_x("LANHostConfig","reboot_schedule_enable", "0", "checked"); %>><#checkbox_No#>
+                                        </td>
+                                </tr>
+                                <tr id="reboot_schedule_date_tr">
+                                        <th>Date to Reboot</th>
+                                        <td>
+                                        <input type="checkbox" name="reboot_date_x_Sun" class="input" onChange="return changeDate();"><#date_Sun_itemdesc#>
+                                        <input type="checkbox" name="reboot_date_x_Mon" class="input" onChange="return changeDate();"><#date_Mon_itemdesc#>
+                                        <input type="checkbox" name="reboot_date_x_Tue" class="input" onChange="return changeDate();"><#date_Tue_itemdesc#>
+                                        <input type="checkbox" name="reboot_date_x_Wed" class="input" onChange="return changeDate();"><#date_Wed_itemdesc#>
+                                        <input type="checkbox" name="reboot_date_x_Thu" class="input" onChange="return changeDate();"><#date_Thu_itemdesc#>
+                                        <input type="checkbox" name="reboot_date_x_Fri" class="input" onChange="return changeDate();"><#date_Fri_itemdesc#>
+                                        <input type="checkbox" name="reboot_date_x_Sat" class="input" onChange="return changeDate();"><#date_Sat_itemdesc#>
+                                        </td>
+                                </tr>
+                                <tr id="reboot_schedule_time_tr">
+                                        <th>Time of Day to Reboot</th>
+                                        <td>
+                                        <input type="text" maxlength="2" class="input_3_table" name="reboot_time_x_hour" onKeyPress="return validator.isNumber(this,event);" onblur="validator.timeRange(this, 0);" autocorrect="off" autocapitalize="off"> :
+                                        <input type="text" maxlength="2" class="input_3_table" name="reboot_time_x_min" onKeyPress="return validator.isNumber(this,event);" onblur="validator.timeRange(this, 1);" autocorrect="off" autocapitalize="off">
+                                        </td>
+                                </tr>
 				<tr>
 					<th><a class="hintstyle"  href="javascript:void(0);" onClick="openHint(11,2)"><#LANHostConfig_x_TimeZone_itemname#></a></th>
 					<td>
@@ -1155,27 +1330,27 @@ function toggle_jffs_visibility(state){
 					</td>
 				</tr>
 				<tr id="dst_changes_start" style="display:none;">
-					<th><a class="hintstyle"  href="javascript:void(0);" onClick="openHint(11,7)">DST time zone changes starts</a></th>
+					<th><a class="hintstyle"  href="javascript:void(0);" onClick="openHint(11,7)"><#LANHostConfig_x_TimeZone_DSTStart#></a></th>
 					<td>
 								<div id="dst_start" style="color:white;display:none;">
 									<div>
-										<select name="dst_start_m" class="input_option"></select>&nbsp;month &nbsp;
+										<select name="dst_start_m" class="input_option"></select>&nbsp;<#month#> &nbsp;
 										<select name="dst_start_w" class="input_option"></select>&nbsp;
-										<select name="dst_start_d" class="input_option"></select>&nbsp;weekday &nbsp;
-										<select name="dst_start_h" class="input_option"></select>&nbsp;hour &nbsp;
+										<select name="dst_start_d" class="input_option"></select>&nbsp;<#weekday#> &nbsp;
+										<select name="dst_start_h" class="input_option"></select>&nbsp;<#hour_time#> &nbsp;
 									</div>
 								</div>
 					</td>	
 				</tr>
 				<tr id="dst_changes_end" style="display:none;">
-					<th><a class="hintstyle"  href="javascript:void(0);" onClick="openHint(11,8)">DST time zone changes ends</a></th>
+					<th><a class="hintstyle"  href="javascript:void(0);" onClick="openHint(11,8)"><#LANHostConfig_x_TimeZone_DSTEnd#></a></th>
 					<td>
 								<div id="dst_end" style="color:white;display:none;">
 									<div>
-										<select name="dst_end_m" class="input_option"></select>&nbsp;month &nbsp;
+										<select name="dst_end_m" class="input_option"></select>&nbsp;<#month#> &nbsp;
 										<select name="dst_end_w" class="input_option"></select>&nbsp;
-										<select name="dst_end_d" class="input_option"></select>&nbsp;weekday &nbsp;
-										<select name="dst_end_h" class="input_option"></select>&nbsp;hour &nbsp;
+										<select name="dst_end_d" class="input_option"></select>&nbsp;<#weekday#> &nbsp;
+										<select name="dst_end_h" class="input_option"></select>&nbsp;<#hour_time#> &nbsp;
 									</div>
 								</div>
 					</td>
@@ -1195,6 +1370,15 @@ function toggle_jffs_visibility(state){
 						<input type="radio" name="telnetd_enable" class="input" value="0" <% nvram_match("telnetd_enable", "0", "checked"); %>><#checkbox_No#>
 					</td>
 				</tr>
+			</table>
+
+			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable" style="margin-top:8px;">
+				<thead>
+					<tr>
+					  <td colspan="2">Web interface</td>
+					</tr>
+				</thead>
+
 				<tr id="https_tr">
 					<th><#WLANConfig11b_AuthenticationMethod_itemname#></th>
 					<td>
@@ -1240,7 +1424,7 @@ function toggle_jffs_visibility(state){
 				</tr>
 
 				<tr>
-					<th align="right"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(11,6);">Enable WAN down browser redirect notice</a></th>
+					<th align="right"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(11,6);"><#Enable_redirect_notice#></a></th>
 					<td>
 						<input type="radio" name="nat_redirect_enable" class="input" value="1" <% nvram_match_x("","nat_redirect_enable","1", "checked"); %> ><#checkbox_Yes#>
 						<input type="radio" name="nat_redirect_enable" class="input" value="0" <% nvram_match_x("","nat_redirect_enable","0", "checked"); %> ><#checkbox_No#>

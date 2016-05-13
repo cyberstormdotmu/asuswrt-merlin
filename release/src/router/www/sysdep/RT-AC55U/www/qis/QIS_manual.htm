@@ -10,7 +10,7 @@
 <script type="text/JavaScript" src="/general.js"></script>
 <script type="text/JavaScript" src="/form.js"></script>
 <script type="text/JavaScript" src="/help.js"></script>
-<script language="JavaScript" type="text/javascript" src="/jquery.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/JavaScript">
 
 
@@ -115,7 +115,7 @@ function submitForm(){
 		document.form.submit();
 	}
 	else{
-		document.form.action = "/qis/QIS_detect.htm";
+		document.form.action = "/qis/QIS_internet_type.htm";
 		document.form.submit();
 	}
 }
@@ -174,7 +174,7 @@ function submitenter(myfield,e){
 		</span>
 		&nbsp;&nbsp;
 		<span id="MBMode">
-			<input type="radio" name="sw_mode_radio" class="input" value="4" onclick="setScenerion(4);" <% nvram_match("sw_mode", "4", "checked"); %>>Media bridge
+			<input type="radio" name="sw_mode_radio" class="input" value="4" onclick="setScenerion(4);" <% nvram_match("sw_mode", "4", "checked"); %>><#OP_MB_item#>
 		</span>
 	</span>
 

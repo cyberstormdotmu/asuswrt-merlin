@@ -41,6 +41,7 @@ function initial(){
 	}
 	else{	//DSL not support
 		ISP_Profile_Selection(original_switch_wantag);
+		
 		if(!manualstb_support) 
 			document.form.switch_wantag.remove(8);
 	}
@@ -67,6 +68,17 @@ function initial(){
 	if(based_modelid == "RT-AC87U"){ //MODELDEP: RT-AC87 : Quantenna port
 		document.form.switch_stb_x.remove(5);	//LAN1 & LAN2
 		document.form.switch_stb_x.remove(1);	//LAN1
+	}
+
+	if( based_modelid != "RT-AC3200" &&
+		based_modelid != "RT-AC87U" && 
+		based_modelid != "RT-AC68U" &&
+		based_modelid != "RT-AC66U" &&
+		based_modelid != "RT-AC51U" &&
+		based_modelid != "RT-N66U" &&
+		based_modelid != "RT-N18U"
+	){	// MODELDEP: RT-AC3200, RT-AC87U, RT-AC68U, RT-AC66U, RT-AC51U, RT-N66U, RT-N18U
+		document.getElementById('meoOption').outerHTML = "";
 	}
 }
 
@@ -103,9 +115,9 @@ function load_ISP_profile(){
 	else if(document.form.switch_wantag.value == "movistar") {
 		setting_value = [["6", "0"], ["2", "0"], ["3", "0"], "6"]; 
 	}
-        else if(document.form.switch_wantag.value == "meo") {
-                setting_value = [["12", "0"], ["12", "0"], ["", "0"], "4"]; 
-        }
+	else if(document.form.switch_wantag.value == "meo") {
+		setting_value = [["12", "0"], ["12", "0"], ["", "0"], "4"]; 
+	}
 	
 	if(setting_value.length == 4){
 		document.form.switch_wan0tagid.value = setting_value[0][0];
@@ -117,10 +129,15 @@ function load_ISP_profile(){
 		document.form.switch_stb_x.value = setting_value[3];
 	}
 
-	if(document.form.switch_wantag.value == "maxis_fiber_sp_iptv" || document.form.switch_wantag.value == "maxis_fiber_iptv") {
+	if(document.form.switch_wantag.value == "maxis_fiber_sp_iptv" || 
+	   document.form.switch_wantag.value == "maxis_fiber_iptv" ||
+	   document.form.switch_wantag.value == "meo"
+	) {
 		document.form.mr_enable_x.value = "1";
 		document.form.emf_enable.value = "1";
 	}
+	if(document.form.switch_wantag.value == "meo")
+		document.form.ttl_inc_enable.value = "1";
 }
 
 function ISP_Profile_Selection(isp){
@@ -308,6 +325,7 @@ function change_rmvlan(){
 <input type="hidden" name="preferred_lang" id="preferred_lang" value="<% nvram_get("preferred_lang"); %>">
 <input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
 <input type="hidden" name="dslx_rmvlan" value='<% nvram_get("dslx_rmvlan"); %>'>
+<input type="hidden" name="ttl_inc_enable" value='<% nvram_get("ttl_inc_enable"); %>'>
 
 <table class="content" align="center" cellpadding="0" cellspacing="0">
   <tr>
@@ -339,10 +357,10 @@ function change_rmvlan(){
 	  <!-- IPTV & VoIP Setting -->
 	  
 		<!--###HTML_PREP_START###-->		
-	  <table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">
+	  <table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 	  	<thead>
 			<tr>
-				<td colspan="2">Port</td>
+				<td colspan="2"><#Port_Mapping_item1#></td>
 			</tr>
 		</thead>
 	    	<tr>
@@ -358,12 +376,12 @@ function change_rmvlan(){
 					<option value="maxis_fiber" <% nvram_match("switch_wantag", "maxis_fiber", "selected"); %>>Maxis-Fiber</option>
 					<option value="maxis_fiber_sp" <% nvram_match("switch_wantag", "maxis_fiber_sp", "selected"); %>>Maxis-Fiber-Special</option>
 					<option value="movistar" <% nvram_match("switch_wantag", "movistar", "selected"); %>>Movistar</option>
-<!--
-					<option value="meo" <% nvram_match("switch_wantag", "meo", "selected"); %>>Meo</option>
-                                        <option value="maxis_fiber_iptv" <% nvram_match("switch_wantag", "maxis_fiber_iptv", "selected"); %>>Maxis-Fiber-IPTV</option>
-                                        <option value="maxis_fiber_sp_iptv" <% nvram_match("switch_wantag", "maxis_fiber_sp_iptv", "selected"); %>>Maxis-Fiber-Special-IPTV</option>
+					<option id="meoOption" value="meo" <% nvram_match("switch_wantag", "meo", "selected"); %>>Meo</option>
+<!--					
+					<option value="maxis_fiber_iptv" <% nvram_match("switch_wantag", "maxis_fiber_iptv", "selected"); %>>Maxis-Fiber-IPTV</option>
+					<option value="maxis_fiber_sp_iptv" <% nvram_match("switch_wantag", "maxis_fiber_sp_iptv", "selected"); %>>Maxis-Fiber-Special-IPTV</option>
 -->
-						<option value="manual" <% nvram_match( "switch_wantag", "manual", "selected"); %>>Manual</option>
+					<option value="manual" <% nvram_match( "switch_wantag", "manual", "selected"); %>><#Manual_Setting_btn#></option>
 				</select>
 			</td>
 			</tr>
@@ -390,7 +408,7 @@ function change_rmvlan(){
 	  	<td>LAN3</td>
 		</tr>
 		<tr id="wan_internet_x">
-	  	<th width="30%">Internet</th>
+	  	<th width="30%"><#Internet#></th>
 	  	<td>
 			VID&nbsp;<input type="text" name="switch_wan0tagid" class="input_6_table" maxlength="4" value="<% nvram_get( "switch_wan0tagid"); %>" onKeyPress="return validator.isNumber(this, event);" autocorrect="off" autocapitalize="off">&nbsp;&nbsp;&nbsp;&nbsp;
 			PRIO&nbsp;<input type="text" name="switch_wan0prio" class="input_3_table" maxlength="1" value="<% nvram_get( "switch_wan0prio"); %>" onKeyPress="return validator.isNumber(this, event);" autocorrect="off" autocapitalize="off">

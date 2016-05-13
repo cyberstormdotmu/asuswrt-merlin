@@ -1040,6 +1040,8 @@ void bcmvlan_models(int model, char *vlan)
 	case MODEL_RTAC88U:
 	case MODEL_RTAC3100:
 	case MODEL_RTAC5300:
+	case MODEL_RTAC1200G:
+	case MODEL_RTAC1200GP:
 		strcpy(vlan, "vlan1");
 		break;
 	case MODEL_RTN53:
@@ -1153,6 +1155,10 @@ unsigned int netdev_calc(char *ifname, char *ifname_desc, unsigned long *rx, uns
 		if(model == MODEL_DSLAC68U)
 			return 1;
 
+#ifdef RTCONFIG_BCM5301X_TRAFFIC_MONITOR
+			return 1;
+#endif
+
 		// special handle for non-tag wan of broadcom solution
 		// pretend vlanX is must called after ethX
 		if(nvram_match("switch_wantag", "none")) { //Don't calc if select IPTV
@@ -1199,12 +1205,14 @@ unsigned int netdev_calc(char *ifname, char *ifname_desc, unsigned long *rx, uns
 			get_mt7621_wan_unit_bytecount(unit, tx, rx);
 #endif			
 #endif
+#ifndef RTCONFIG_BCM5301X_TRAFFIC_MONITOR
 			if(strlen(modelvlan) && strcmp(ifname, "eth0")==0) {
 				backup_rx = *rx;
 				backup_tx = *tx;
 				backup_set  = 1;
 			}
 			else{
+#endif
 #ifdef RTCONFIG_DUALWAN
 				if ( (unit == wan_primary_ifunit()) || ( !strstr(nvram_safe_get("wans_dualwan"), "none") && nvram_match("wans_mode", "lb")) )
 				{
@@ -1223,7 +1231,9 @@ unsigned int netdev_calc(char *ifname, char *ifname_desc, unsigned long *rx, uns
 					return 1;
 				}			
 #endif	/* RTCONFIG_DUALWAN */
+#ifndef RTCONFIG_BCM5301X_TRAFFIC_MONITOR
 			}
+#endif
 		}
 		else if (dualwan_unit__usbif(unit)) {
 #ifdef RTCONFIG_DUALWAN
@@ -1345,13 +1355,17 @@ _dprintf("%s: Finish.\n", __FUNCTION__);
 void logmessage_normal(char *logheader, char *fmt, ...){
   va_list args;
   char buf[512];
+  int level;
 
   va_start(args, fmt);
 
   vsnprintf(buf, sizeof(buf), fmt, args);
 
+  level = nvram_get_int("message_loglevel");
+  if (level > 7) level = 7;
+
   openlog(logheader, 0, 0);
-  syslog(0, buf);
+  syslog(level, buf);
   closelog();
   va_end(args);
 }

@@ -27,6 +27,7 @@ wl_channel_list_5g = '<% channel_list_5g(); %>';
 var wl_unit_value = '<% nvram_get("wl_unit"); %>';
 var wl_subunit_value = '<% nvram_get("wl_subunit"); %>';
 var wlc_band_value = '<% nvram_get("wlc_band"); %>';
+var cur_control_channel = [<% wl_control_channel(); %>][0];
 function initial(){
 	show_menu();	
 
@@ -111,7 +112,12 @@ function initial(){
 	document.getElementById('WPS_hideSSID_hint').innerHTML = "<#WPS_hideSSID_hint#>";	
 	if("<% nvram_get("wl_closed"); %>" == 1){
 		document.getElementById('WPS_hideSSID_hint').style.display = "";	
-	}	
+	}
+	
+	if(!Rawifi_support && !Qcawifi_support && document.form.wl_channel.value  == '0'){
+		document.getElementById("auto_channel").style.display = "";
+		document.getElementById("auto_channel").innerHTML = "Current control channel: "+cur_control_channel[wl_unit_value];
+	}
 }
 
 function check_channel_2g(){
@@ -215,7 +221,7 @@ function applyRule(){
 		
 	if(validForm()){
 		if(document.form.wl_closed[0].checked && document.form.wps_enable.value == 1){
-			if(confirm("Selecting Hide SSID will disable WPS. Are you sure?")){
+			if(confirm("<#wireless_JS_Hide_SSID#>")){
 				document.form.wps_enable.value = "0";	
 			}
 			else{	
@@ -226,14 +232,14 @@ function applyRule(){
 		if(document.form.wps_enable.value == 1){		//disable WPS if choose WEP or WPA/TKIP Encryption
 			if(wps_multiband_support && (document.form.wps_multiband.value == 1	|| document.form.wps_band.value == wl_unit_value)){		//Ralink, Qualcomm Atheros
 				if(document.form.wl_auth_mode_x.value == "open" && document.form.wl_wep_x.value == "0"){
-					if(!confirm("Are you sure to configure WPS in Open System (no security) ?"))
+					if(!confirm("<#wireless_JS_WPS_open#>"))
 						return false;		
 				}
 		
 				if( document.form.wl_auth_mode_x.value == "shared"
 				 ||	document.form.wl_auth_mode_x.value == "psk" || document.form.wl_auth_mode_x.value == "wpa"
 				 || document.form.wl_auth_mode_x.value == "open" && (document.form.wl_wep_x.value == "1" || document.form.wl_wep_x.value == "2")){		//open wep case			
-					if(confirm("Selecting WEP or TKIP Encryption will disable the WPS. Are you sure ?")){
+					if(confirm("<#wireless_JS_disable_WPS#>")){
 						document.form.wps_enable.value = "0";	
 					}
 					else{	
@@ -243,14 +249,14 @@ function applyRule(){
 			}
 			else{			//Broadcom 
 				if(document.form.wl_auth_mode_x.value == "open" && document.form.wl_wep_x.value == "0"){
-					if(!confirm("Are you sure to configure WPS in Open System (no security) ?"))
+					if(!confirm("<#wireless_JS_WPS_open#>"))
 						return false;		
 				}
 		
 				if( document.form.wl_auth_mode_x.value == "shared"
 				 ||	document.form.wl_auth_mode_x.value == "psk" || document.form.wl_auth_mode_x.value == "wpa"
 				 || document.form.wl_auth_mode_x.value == "open" && (document.form.wl_wep_x.value == "1" || document.form.wl_wep_x.value == "2")){		//open wep case			
-					if(confirm("Selecting WEP or TKIP Encryption will disable the WPS. Are you sure ?")){
+					if(confirm("<#wireless_JS_disable_WPS#>")){
 						document.form.wps_enable.value = "0";	
 					}
 					else{	
@@ -309,11 +315,21 @@ function validForm(){
 	if(auth_mode == "psk" || auth_mode == "psk2" || auth_mode == "pskpsk2"){ //2008.08.04 lock modified
 		if(is_KR_sku){
 			if(!validator.psk_KR(document.form.wl_wpa_psk))
-                                return false;
+				return false;
 		}
 		else{
 			if(!validator.psk(document.form.wl_wpa_psk))
 				return false;
+		}
+		
+		//confirm common string combination	#JS_common_passwd#
+		var is_common_string = check_common_string(document.form.wl_wpa_psk.value, "wpa_key");
+		if(is_common_string){
+			if(confirm("<#JS_common_passwd#>")){
+				document.form.wl_wpa_psk.focus();
+				document.form.wl_wpa_psk.select();
+				return false;	
+			}	
 		}
 		
 		if(!validator.range(document.form.wl_wpa_gtk_rekey, 0, 2592000))
@@ -592,6 +608,7 @@ function high_power_auto_channel(){
 					<th><a id="wl_channel_select" class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 3);"><#WLANConfig11b_Channel_itemname#></a></th>
 					<td>
 				 		<select name="wl_channel" class="input_option" onChange="high_power_auto_channel();insertExtChannelOption();"></select>
+						<span id="auto_channel" style="display:none;margin-left:10px;"></span><br>
 					</td>
 			  </tr>			 
 

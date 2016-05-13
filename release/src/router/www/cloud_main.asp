@@ -15,21 +15,24 @@
 <script type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/help.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
+<script type="text/javascript" src="/form.js"></script>
 <script>
 
 if('<% nvram_get("start_aicloud"); %>' == '0')
 	location.href = "cloud__main.asp";
-
-
 
 <% wanlink(); %>
 
 <% apps_action(); %> //trigger apps_action.
 
 var cloud_status;
-window.onresize = cal_agreement_block;
+window.onresize = function() {
+	if(document.getElementById("agreement_panel").style.display == "block") {
+		cal_panel_block("agreement_panel", 0.25);
+	}
+} 
 var curState = '<% nvram_get("webdav_aidisk"); %>';
 
 var _apps_action = '<% get_parameter("apps_action"); %>';
@@ -59,6 +62,7 @@ for(var x=0; x < apps_array.length; x++){	//check if AiCloud 2.0 has installed
 }
 var ddns_hostname = '<% nvram_get("ddns_hostname_x"); %>';
 var https_port = '<% nvram_get("webdav_https_port"); %>';
+var sw_mode = '<% nvram_get("sw_mode"); %>';
 
 if(tmo_support)
 	var theUrl = "cellspot.router"; 
@@ -104,6 +108,23 @@ function initial(){
 	switch(valid_is_wan_ip(wanlink_ipaddr())){
 		/* private */
 		case 0:
+			var aicloud_url = "https://";
+
+			if(sw_mode=="1"){
+				//- router mode
+				aicloud_url += theUrl;
+			}
+			else{
+			   aicloud_url += '<% nvram_get("lan_ipaddr"); %>';
+			}
+
+			if(https_port != 443){
+			   aicloud_url += ":" + https_port;
+			}
+
+			document.getElementById("accessMethod").innerHTML = "<#AiCloud_enter#> <a id=\"cloud_url\" style=\"font-weight: bolder;text-decoration: underline;\" href=\"" + aicloud_url + "\" target=\"_blank\">" + aicloud_url + "</a>";
+
+			/*
 			if(https_port == 443)
 				document.getElementById("accessMethod").innerHTML = "<#AiCloud_enter#> <a id=\"cloud_url\" style=\"font-weight: bolder;text-decoration: underline;\" href=\"https://router.asus.com\" target=\"_blank\">https://router.asus.com</a>";
 			else{
@@ -111,6 +132,7 @@ function initial(){
 				document.getElementById('cloud_url').href = "https://"+ theUrl +":" + https_port;
 				document.getElementById('cloud_url').innerHTML = "https://"+ theUrl +":" + https_port;
 			}
+			*/
 			break;
 		/* public */
 		case 1:
@@ -135,10 +157,15 @@ function initial(){
 			break;
 	}
 
-	cal_agreement_block();
+	cal_panel_block("agreement_panel", 0.25);
 
 	if(!rrsut_support)
 		document.getElementById("rrsLink").style.display = "none";
+	
+	if(sw_mode == 2 || sw_mode == 3 || sw_mode == 4){
+		document.getElementById("smart_sync_link").style.display = "none";
+		document.getElementById("rrsLink").style.display = "none";
+	}		
 }
 
 function valid_is_wan_ip(ip_obj){
@@ -194,30 +221,6 @@ function _confirm(){
 	FormActions("start_apply.htm", "apply", "restart_webdav", "3");
 	showLoading();
 	document.form.submit();
-}
-
-function cal_agreement_block(){
-	var blockmarginLeft;
-	if (window.innerWidth)
-		winWidth = window.innerWidth;
-	else if ((document.body) && (document.body.clientWidth))
-		winWidth = document.body.clientWidth;
-		
-	if (document.documentElement  && document.documentElement.clientHeight && document.documentElement.clientWidth){
-		winWidth = document.documentElement.clientWidth;
-	}
-
-	if(winWidth >1050){	
-		winPadding = (winWidth-1050)/2;	
-		winWidth = 1105;
-		blockmarginLeft= (winWidth*0.25)+winPadding;
-	}
-	else if(winWidth <=1050){
-		blockmarginLeft= (winWidth)*0.25+document.body.scrollLeft;	
-
-	}
-
-	document.getElementById("agreement_panel").style.marginLeft = blockmarginLeft+"px";
 }
 
 function apps_form(_act, _name, _flag){
@@ -611,7 +614,7 @@ function update_applist(e){
 <body onload="initial();" onunload="return unload_body();">
 <div id="TopBanner"></div>
 <div id="Loading" class="popup_bg"></div>
-	<div id="agreement_panel" class="panel_folder" style="margin-top: -100px;display:none;position:absolute;">
+	<div id="agreement_panel" class="panel_folder" style="margin-top: -100px;">
 			<div class="machineName" style="font-family:Microsoft JhengHei;font-size:12pt;font-weight:bolder; margin-top:25px;margin-left:30px;height:35px;">Term of use</div>
 			<div class="folder_tree">Thank you for using our AiCloud 2.0 firmware, AiCloud 2.0 mobile application and AiCloud 2.0 portal website(“AiCloud”). AiCloud 2.0 is provided by ASUSTeK Computer Inc. (“ASUS”). This notice constitutes a valid and binding agreement between ASUS. By using AiCloud 2.0 , YOU, AS A USER, EXPRESSLY ACKNOWLEGE THAT YOU HAVE READ AND UNDERSTAND AND AGREE TO BE BOUND BY THE TERMS OF USE NOTICE (“NOTICE”) AND ANY NEW VERSIONS HEREOF.
 <br><br>
@@ -715,7 +718,7 @@ This agreement constitutes the entire agreement between you and ASUS with respec
 							<div class="tabclick"><span>AiCloud 2.0</span></div>
 						</td>
 						<td>
-							<a href="cloud_sync.asp"><div class="tab" id="tab_smartsync"><span><#smart_sync#></span></div></a>
+							<a id="smart_sync_link" href="cloud_sync.asp"><div class="tab" id="tab_smartsync"><span><#smart_sync#></span></div></a>
 						</td>
 						<td>
 							<a id="rrsLink" href="cloud_router_sync.asp"><div class="tab" id="tab_routersync"><span><#Server_Sync#></span></div></a>

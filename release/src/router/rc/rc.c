@@ -100,9 +100,15 @@ static int rctest_main(int argc, char *argv[])
 			if(on) start_watchdog();
 			else stop_watchdog();
 		}
+#if ! (defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK))
 		else if (strcmp(argv[1], "watchdog02") == 0) {
 			if(on) start_watchdog02();
 			else stop_watchdog02();
+		}
+#endif  /* ! (RTCONFIG_QCA || RTCONFIG_RALINK) */
+		else if (strcmp(argv[1], "sw_devled") == 0) {
+			if(on) start_sw_devled();
+			else stop_sw_devled();
 		}
 #ifdef RTCONFIG_FANCTRL
 		else if (strcmp(argv[1], "phy_tempsense") == 0) {
@@ -166,7 +172,7 @@ static int rctest_main(int argc, char *argv[])
 					f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", "2", 0, 0);
 #endif
 
-#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTAC54U)
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P) || defined(RTN300) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTAC54U)
 					if (!(!nvram_match("switch_wantag", "none")&&!nvram_match("switch_wantag", "")))
 #endif
 					{
@@ -191,11 +197,17 @@ static int rctest_main(int argc, char *argv[])
 				start_webdav();
 		}
 #endif
+#ifdef RTCONFIG_TUNNEL
+		else if (strcmp(argv[1], "mastiff") == 0) {
+			if(on)
+				start_mastiff();
+		}
+#endif
 		else if (strcmp(argv[1], "gpiow") == 0) {
 			if(argc>=4) set_gpio(atoi(argv[2]), atoi(argv[3]));
 		}
 		else if (strcmp(argv[1], "gpior") == 0) {
-			_dprintf("%d\n", get_gpio(atoi(argv[2])));
+			printf("%d\n", get_gpio(atoi(argv[2])));
 		}
 		else if (strcmp(argv[1], "gpiod") == 0) {
 			if(argc>=4) gpio_dir(atoi(argv[2]), atoi(argv[3]));
@@ -297,7 +309,10 @@ static const applets_t applets[] = {
 	{ "mtd-unlock",			mtd_unlock_erase_main		},
 #endif
 	{ "watchdog",			watchdog_main			},
+#if ! (defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK))
 	{ "watchdog02",			watchdog02_main			},
+#endif  /* ! (RTCONFIG_QCA || RTCONFIG_RALINK) */
+	{ "sw_devled",			sw_devled_main			},
 #ifdef RTCONFIG_FANCTRL
 	{ "phy_tempsense",		phy_tempsense_main		},
 #endif
@@ -342,8 +357,16 @@ static const applets_t applets[] = {
 	{ "delay_exec",			delay_main			},
 
 	{ "wanduck",			wanduck_main			},
+#ifdef RTCONFIG_DUALWAN
+#ifdef CONFIG_BCMWL5
+	{ "dualwan",			dualwan_control			},
+#endif
+#endif
 	{ "tcpcheck",			tcpcheck_main			},
 	{ "autodet", 			autodet_main			},
+#ifdef RTCONFIG_QCA_PLC_UTILS
+	{ "autodet_plc", 		autodet_plc_main		},
+#endif
 #ifdef RTCONFIG_CIFS
 	{ "mount-cifs",			mount_cifs_main			},
 #endif
@@ -369,6 +392,7 @@ static const applets_t applets[] = {
 	{ "bwdpi",			bwdpi_main			},
 	{ "bwdpi_check",		bwdpi_check_main		},
 	{ "bwdpi_wred_alive",		bwdpi_wred_alive_main		},
+	{ "bwdpi_db_10",		bwdpi_db_10_main		},
 	{ "rsasign_sig_check",		rsasign_sig_check_main		},
 #endif
 	{ "hour_monitor",		hour_monitor_main		},
@@ -378,8 +402,14 @@ static const applets_t applets[] = {
 #ifdef RTCONFIG_TR069
 	{ "dhcpc_lease",		dhcpc_lease_main		},
 #endif
-#if defined(RTCONFIG_USER_LOW_RSSI) && defined(RTCONFIG_BCMARM)
+#if ((defined(RTCONFIG_USER_LOW_RSSI) && defined(RTCONFIG_BCMARM)) || defined(RTCONFIG_NEW_USER_LOW_RSSI))
 	{ "roamast",			roam_assistant_main		},
+#endif
+#ifdef RTCONFIG_DHCP_OVERRIDE
+	{ "detectWAN_arp",		detectWAN_arp_main		},
+#endif
+#if defined(RTCONFIG_KEY_GUARD)
+	{ "keyguard",			keyguard_main			},
 #endif
 	{NULL, NULL}
 };
@@ -710,6 +740,13 @@ int main(int argc, char **argv)
 	}
 #endif
 #endif
+
+#if defined(CONFIG_BCMWL5) || defined(RTCONFIG_RALINK) || defined(RTCONFIG_QCA)
+	else if(!strcmp(base, "set_factory_mode")) {
+		set_factory_mode();
+		return 0;
+	}
+#endif
 	else if(!strcmp(base, "run_telnetd")) {
 		run_telnetd();
 		return 0;
@@ -758,6 +795,13 @@ int main(int argc, char **argv)
 	}
 #endif
 #endif
+#ifdef RTCONFIG_DUALWAN
+#ifdef CONFIG_BCMWL5
+	else if (!strcmp(base, "dualwan")){
+		dualwan_control();
+	}
+#endif
+#endif
 #ifdef RTCONFIG_WIRELESSREPEATER
 	else if (!strcmp(base, "wlcconnect")) {
 		return wlcconnect_main();
@@ -780,6 +824,29 @@ int main(int argc, char **argv)
 	}
 
 #ifdef RTCONFIG_BCMARM
+#if defined(RTAC1200G) || defined(RTAC1200GP)
+	/* mtd-erase2 [device] */
+	else if (!strcmp(base, "mtd-erase2")) {
+		if (argv[1] && ((!strcmp(argv[1], "boot")) ||
+				(!strcmp(argv[1], "linux")) ||
+				(!strcmp(argv[1], "rootfs")) ||
+				(!strcmp(argv[1], "nvram")))) {
+			return mtd_erase(argv[1]);
+		} else {
+			fprintf(stderr, "usage: mtd-erase2 [device]\n");
+			return EINVAL;
+		}
+	}
+	/* mtd-write2 [path] [device] */
+	else if (!strcmp(base, "mtd-write2")) {
+		if (argc >= 3)
+			return mtd_write(argv[1], argv[2]);
+		else {
+			fprintf(stderr, "usage: mtd-write2 [path] [device]\n");
+			return EINVAL;
+		}
+	}
+#else
 	/* mtd-erase2 [device] */
 	else if (!strcmp(base, "mtd-erase2")) {
 		if (argv[1] && ((!strcmp(argv[1], "boot")) ||
@@ -804,6 +871,7 @@ int main(int argc, char **argv)
 			return EINVAL;
 		}
 	}
+#endif
 #endif
 	else if(!strcmp(base, "test_endian")){
 		int num = 0x04030201;
@@ -880,18 +948,6 @@ int main(int argc, char **argv)
 		return 0;
 	}
 #ifdef RTCONFIG_USB_MODEM
-	else if(!strcmp(base, "start_udhcpc")) {
-		pid_t pid;
-
-		if(argc != 3){
-			printf("Usage: %s <wan_ifname> <wan_unit>\n", base);
-			return 0;
-		}
-
-		start_udhcpc(argv[1], atoi(argv[2]), &pid);
-
-		return 0;
-	}
 	else if(!strcmp(base, "write_3g_ppp_conf")){
 		return write_3g_ppp_conf();
 	}
@@ -926,25 +982,21 @@ int main(int argc, char **argv)
 	}
 #endif
 #endif
-#if defined(RTCONFIG_IPV6) && defined(RTCONFIG_WIDEDHCP6)
-	else if(!strcmp(base, "stop_ipv6")) {
-		stop_ipv6();
-		return 0;
-	}
-	else if(!strcmp(base, "start_dhcp6c")) {
-		start_dhcp6c();
-		return 0;
-	}
-#endif /* RTCONFIG_WIDEDHCP6 */
 #ifdef RTCONFIG_TOR
 	else if (!strcmp(base, "start_tor")) {
 		start_Tor_proxy();
 		return 0;
 	}
 #endif
-#if defined(RTCONFIG_USER_LOW_RSSI) && defined(RTCONFIG_BCMARM)
+#if ((defined(RTCONFIG_USER_LOW_RSSI) && defined(RTCONFIG_BCMARM)) || defined(RTCONFIG_NEW_USER_LOW_RSSI))
 	else if (!strcmp(base, "start_roamast")) {
 		start_roamast();
+		return 0;
+	}
+#endif
+#if defined(RTCONFIG_KEY_GUARD)
+	else if (!strcmp(base, "start_keyguard")) {
+		start_keyguard();
 		return 0;
 	}
 #endif

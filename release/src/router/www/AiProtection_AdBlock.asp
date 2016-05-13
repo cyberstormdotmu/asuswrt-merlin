@@ -14,7 +14,7 @@
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/general.js"></script>
 <script type="text/javascript" src="/help.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <style>
 #switch_menu{
@@ -44,7 +44,7 @@
 
 function initial(){
 	show_menu();
-	document.getElementById("_AiProtection_HomeSecurity").innerHTML = '<table><tbody><tr><td><div class="_AiProtection_HomeSecurity"></div></td><td><div style="width:120px;">AiProtection</div></td></tr></tbody></table>';
+	document.getElementById("_AiProtection_HomeSecurity").innerHTML = '<table><tbody><tr><td><div class="_AiProtection_HomeSecurity"></div></td><td><div style="width:120px;"><#AiProtection_title#></div></td></tr></tbody></table>';
 	document.getElementById("_AiProtection_HomeSecurity").className = "menu_clicked";
 	register_event();
 }
@@ -108,7 +108,7 @@ function register_event(){
 									<table width="730px">
 										<tr>
 											<td align="left">
-												<div class="formfonttitle" style="width:400px">AiProtection - Ad Blocking</div>
+												<div class="formfonttitle" style="width:400px"><#AiProtection_title#> - Ad Blocking</div>
 											</td>
 										</tr>
 									</table>

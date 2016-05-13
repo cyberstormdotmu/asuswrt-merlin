@@ -21,30 +21,31 @@
 <script type="text/javascript" src="/md5.js"></script>
 <script type="text/javascript" src="/chanspec.js"></script>
 <script type="text/javascript" src="/validator.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <script>
 <% wl_get_parameter(); %>
 
 wl_channel_list_2g = <% channel_list_2g(); %>;
 wl_channel_list_5g = <% channel_list_5g(); %>;
-
+var cur_control_channel = [<% wl_control_channel(); %>][0];
+var wl_unit = <% nvram_get("wl_unit"); %>;
 var country = '';
-if('<% nvram_get("wl_unit"); %>' == '1')
-		country = '<% nvram_get("wl1_country_code"); %>';
+if(wl_unit == '1')
+	country = '<% nvram_get("wl1_country_code"); %>';
 else		
-		country = '<% nvram_get("wl0_country_code"); %>';
+	country = '<% nvram_get("wl0_country_code"); %>';
 
 function initial(){
 	show_menu();
 	if(band5g_11ac_support){
-		regen_5G_mode(document.form.wl_nmode_x,'<% nvram_get("wl_unit"); %>')		
+		regen_5G_mode(document.form.wl_nmode_x, wl_unit)		
 	}
 	
-	genBWTable('<% nvram_get("wl_unit"); %>');	
+	genBWTable(wl_unit);	
 
-	if((sw_mode == 2 || sw_mode == 4) && '<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>' && '<% nvram_get("wl_subunit"); %>' != '1'){
-		_change_wl_unit('<% nvram_get("wl_unit"); %>');
+	if((sw_mode == 2 || sw_mode == 4) && wl_unit == '<% nvram_get("wlc_band"); %>' && '<% nvram_get("wl_subunit"); %>' != '1'){
+		_change_wl_unit(wl_unit);
 	}
 
 	//Change wireless mode help desc
@@ -63,7 +64,7 @@ function initial(){
 	}
 
 	// special case after modifing GuestNetwork
-	if("<% nvram_get("wl_unit"); %>" == "-1" && "<% nvram_get("wl_subunit"); %>" == "-1"){
+	if(wl_unit == "-1" && "<% nvram_get("wl_subunit"); %>" == "-1"){
 		change_wl_unit();
 	}
 
@@ -110,7 +111,7 @@ function initial(){
 		document.getElementById("wl_unit_field").style.display = "none";
 
 	if(sw_mode == 2 || sw_mode == 4)
-		document.form.wl_subunit.value = ('<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>') ? 1 : -1;
+		document.form.wl_subunit.value = (wl_unit == '<% nvram_get("wlc_band"); %>') ? 1 : -1;
 				
 	change_wl_nmode(document.form.wl_nmode_x);
 	if(country == "EU"){		//display checkbox of DFS channel under 5GHz
@@ -119,7 +120,7 @@ function initial(){
 		|| based_modelid == "RT-AC3200"
 		|| (based_modelid == "RT-AC66U" && wl1_dfs == "1")		//0: A2 not support, 1: B0 support
 		|| based_modelid == "RT-N66U"){
-				if(document.form.wl_channel.value  == '0' && '<% nvram_get("wl_unit"); %>' == '1'){
+				if(document.form.wl_channel.value  == '0' && wl_unit == '1'){
 						document.getElementById('dfs_checkbox').style.display = "";
 						check_DFS_support(document.form.acs_dfs_checkbox);
 				}
@@ -132,7 +133,7 @@ function initial(){
 		|| based_modelid == "RT-AC66U"
 		|| based_modelid == "RT-N66U"
 		|| based_modelid == "RT-AC53U"){		
-			if(document.form.wl_channel.value  == '0' && '<% nvram_get("wl_unit"); %>' == '1')
+			if(document.form.wl_channel.value  == '0' && wl_unit == '1')
 				document.getElementById('acs_band1_checkbox').style.display = "";					
 		}
 	}
@@ -140,6 +141,9 @@ function initial(){
 	if(smart_connect_support){
 		var flag = '<% get_parameter("flag"); %>';		
 		var smart_connect_flag_t;
+
+		if(based_modelid == "RT-AC5300")
+			inputCtrl(document.form.smart_connect_t, 1);
 
 		document.getElementById("smartcon_enable_field").style.display = "";
 
@@ -149,7 +153,18 @@ function initial(){
 			smart_connect_flag_t = flag;	
 
 		document.form.smart_connect_x.value = smart_connect_flag_t;
+		if(smart_connect_flag_t == 0)
+			document.form.smart_connect_t.value = 1;
+		else    
+			document.form.smart_connect_t.value = smart_connect_flag_t;
+
 		enableSmartCon(smart_connect_flag_t);
+	}
+	if(history.pushState != undefined) history.pushState("", document.title, window.location.pathname);
+	
+	if(document.form.wl_channel.value  == '0'){
+		document.getElementById("auto_channel").style.display = "";
+		document.getElementById("auto_channel").innerHTML = "Current control channel: "+cur_control_channel[wl_unit];
 	}
 }
 
@@ -167,7 +182,7 @@ function change_wl_nmode(o){
 
 	
 	wl_chanspec_list_change();
-	genBWTable('<% nvram_get("wl_unit"); %>');
+	genBWTable(wl_unit);
 }
 
 function genBWTable(_unit){
@@ -216,11 +231,7 @@ function genBWTable(_unit){
 			}
 		}
 		else{
-			if(document.form.preferred_lang.value == "UK"){    //use unique font-family for JP
-				bws = [0, 1, 2];
-				bwsDesc = ["20/40 MHz", "20 MHz", "40 MHz"];
-			}
-			else if (!band5g_11ac_support){	//for RT-N66U SDK 6.x
+			if (!band5g_11ac_support){	//for RT-N66U SDK 6.x
 				bws = [0, 1, 2];
 				bwsDesc = ["20/40 MHz", "20 MHz", "40 MHz"];		
 			}else if (based_modelid == "RT-AC87U"){
@@ -291,7 +302,7 @@ function applyRule(){
 
 	if(validForm()){
         if(document.form.wl_closed[0].checked && document.form.wps_enable.value == 1){ 
-            if(!confirm("Selecting Hide SSID will disable WPS. Are you sure?")){
+            if(!confirm("<#wireless_JS_Hide_SSID#>")){	/*Selecting Hide SSID will disable WPS. Are you sure ?*/
                 return false;           
             }
  
@@ -301,14 +312,14 @@ function applyRule(){
         if(document.form.wps_enable.value == 1){
             if(document.form.wps_dualband.value == "1" || document.form.wl_unit.value == document.form.wps_band.value){         //9: RT-AC87U dual band WPS
                 if(document.form.wl_auth_mode_x.value == "open" && document.form.wl_wep_x.value == "0"){
-					if(!confirm("Are you sure to configure WPS in Open System (no security) ?"))
+					if(!confirm("<#wireless_JS_WPS_open#>"))	/*Are you sure to configure WPS in Open System (no security) ?*/
 						return false;           
                 }
                 
                 if( document.form.wl_auth_mode_x.value == "shared"
                  || document.form.wl_auth_mode_x.value == "psk" || document.form.wl_auth_mode_x.value == "wpa"
                  || document.form.wl_auth_mode_x.value == "open" && (document.form.wl_wep_x.value == "1" || document.form.wl_wep_x.value == "2")){              //open wep case
-                    if(!confirm("Selecting WEP or TKIP Encryption will disable the WPS. Are you sure ?"))
+                    if(!confirm("<#wireless_JS_disable_WPS#>"))	/*Selecting WEP or TKIP Encryption will disable the WPS. Are you sure ?*/
                         return false;   
 					
                     document.form.wps_enable.value = "0";   
@@ -316,14 +327,17 @@ function applyRule(){
             }
 			else{
 				if(document.form.wl_auth_mode_x.value == "open" && document.form.wl_wep_x.value == "0"){
-					if(!confirm("Are you sure to configure WPS in Open System (no security) ?"))
+					if(!confirm("<#wireless_JS_WPS_open#>"))
 						return false;		
 				}
 			}
 		}
 
+               if(smart_connect_support && document.form.smart_connect_x.value != 0 && based_modelid == "RT-AC5300")
+                       document.form.smart_connect_x.value = document.form.smart_connect_t.value;
+
 		showLoading();
-		if(based_modelid == "RT-AC87U" && "<% nvram_get("wl_unit"); %>" == "1")
+		if(based_modelid == "RT-AC87U" && wl_unit == "1")
 			stopFlag = '0';
 			
 		document.form.wps_config_state.value = "1";		
@@ -336,7 +350,7 @@ function applyRule(){
 		if(auth_mode == "wpa" || auth_mode == "wpa2" || auth_mode == "wpawpa2" || auth_mode == "radius")
 			document.form.next_page.value = "/Advanced_WSecurity_Content.asp";
 
-		if(document.form.wl_nmode_x.value == "1" && "<% nvram_get("wl_unit"); %>" == "0")
+		if(document.form.wl_nmode_x.value == "1" && wl_unit == "0")
 			document.form.wl_gmode_protection.value = "off";			
 
 		if(sw_mode == 2 || sw_mode == 4)
@@ -357,7 +371,7 @@ function applyRule(){
 			}	
 		}
 
-		if(country == "EU" && based_modelid == "RT-AC87U" && '<% nvram_get("wl_unit"); %>' == '1'){			//Interlocking setting to enable 'wl1_80211h' in EU RT-AC87U under 5GHz
+		if(country == "EU" && based_modelid == "RT-AC87U" && wl_unit == '1'){			//Interlocking setting to enable 'wl1_80211h' in EU RT-AC87U under 5GHz
 			if(document.form.wl_channel.value  == '0' && document.form.acs_dfs.value == '1')			//Auto channel with DFS channel
 				document.form.wl1_80211h.value = "1";	
 		}
@@ -365,7 +379,7 @@ function applyRule(){
 		if(smart_connect_support && document.form.smart_connect_x.value == '1')
 			document.form.wl_unit.value = 0;
 
-		if (based_modelid == "RT-AC87U" && "<% nvram_get("wl_unit"); %>" == "1")
+		if (based_modelid == "RT-AC87U" && wl_unit == "1")
 			detect_qtn_ready();
 		else
 			document.form.submit();
@@ -394,6 +408,16 @@ function validForm(){
 		else{
 			if(!validator.psk(document.form.wl_wpa_psk))
 				return false;
+		}
+		
+		//confirm common string combination	#JS_common_passwd#
+		var is_common_string = check_common_string(document.form.wl_wpa_psk.value, "wpa_key");
+		if(is_common_string){
+			if(confirm("<#JS_common_passwd#>")){
+				document.form.wl_wpa_psk.focus();
+				document.form.wl_wpa_psk.select();
+				return false;	
+			}	
 		}
 		
 		if(!validator.range(document.form.wl_wpa_gtk_rekey, 0, 2592000))
@@ -432,10 +456,32 @@ function _change_wl_unit(val){
 	if(sw_mode == 2 || sw_mode == 4)
 		document.form.wl_subunit.value = (val == '<% nvram_get("wlc_band"); %>') ? 1 : -1;
 	
-	if(smart_connect_support)
-		document.form.current_page.value = "Advanced_Wireless_Content.asp?flag=" + document.form.smart_connect_x.value;
-	
+	if(smart_connect_support){
+		if(document.form.smart_connect_x.value != 0)
+  			document.form.smart_connect_x.value = document.form.smart_connect_t.value;
+		var smart_connect_flag = document.form.smart_connect_x.value;
+		document.form.current_page.value = "Advanced_Wireless_Content.asp?flag=" + smart_connect_flag;
+	}	
 	change_wl_unit();
+}
+
+function _change_smart_connect(val){
+	current_band = wl_unit;
+	document.getElementById("wl_unit_field").style.display = "";
+	var band_desc = new Array();
+	var band_value = new Array();
+	if(val == 0){
+		band_value = [0, 1, 2];
+		band_desc = ['2.4GHz', '5GHz-1', '5GHz-2'];
+	}else if(val == 1){
+		document.getElementById("wl_unit_field").style.display = "none";
+		band_value = [0];
+		band_desc = ['2.4GHz, 5GHz-1 and 5GHz-2'];
+	}else if(val == 2){
+		band_value = [0, 1];
+		band_desc = ['2.4GHz', '5GHz-1 and 5GHz-2'];
+	}
+	add_options_x2(document.form.wl_unit, band_desc, band_value, current_band);
 }
 
 function checkBW(){
@@ -445,7 +491,7 @@ function checkBW(){
 	if(document.form.wl_channel.value != 0 && document.form.wl_bw.value == 0){	//Auto but set specific channel
 		if(document.form.wl_channel.value == "165")	// channel 165 only for 20MHz
 			document.form.wl_bw.selectedIndex = 1;
-		else if('<% nvram_get("wl_unit"); %>' == 0 || document.form.preferred_lang.value == "UK")	//2.4GHz or UK for 40MHz
+		else if(wl_unit == 0)	//2.4GHz for 40MHz
 			document.form.wl_bw.selectedIndex = 2;
 		else{	//5GHz else for 80MHz
 			if(band5g_11ac_support)
@@ -466,7 +512,7 @@ function check_NOnly_to_GN(){
 	// Viz add 2012.11.05 restriction for 'N Only' mode  ( start 	
 	
 	if(document.form.wl_nmode_x.value == "0" || document.form.wl_nmode_x.value == "1"){
-		if("<% nvram_get("wl_unit"); %>" == "1"){		//5G
+		if(wl_unit == "1"){		//5G
 			for(var i=0;i<gn_array_5g.length;i++){
 				if(gn_array_5g[i][0] == "1" && (gn_array_5g[i][3] == "tkip" || gn_array_5g[i][5] == "1" || gn_array_5g[i][5] == "2")){
 					if(document.form.wl_nmode_x.value == "0")
@@ -483,7 +529,7 @@ function check_NOnly_to_GN(){
 				}
 			}		
 		}
-		else if("<% nvram_get("wl_unit"); %>" == "0"){		//2.4G
+		else if(wl_unit == "0"){		//2.4G
 			for(var i=0;i<gn_array_2g.length;i++){
 				if(gn_array_2g[i][0] == "1" && (gn_array_2g[i][3] == "tkip" || gn_array_2g[i][5] == "1" || gn_array_2g[i][5] == "2")){
 					if(document.form.wl_nmode_x.value == "0")
@@ -542,7 +588,7 @@ function tmo_wl_nmode(){
 	var tmo2nmode = [["0",  "<#Auto#>"],["6",       "B Only"],["5", "G Only"],["1", "N Only"],["2",	"B/G Mixed"],["4", "G/N Mixed"]];
 	var tmo5nmode = [["0",  "<#Auto#>"],["7",       "A Only"],["1", "N Only"],["3", "AC Only"],["4", "A/N Mixed"]];
 	free_options(document.form.wl_nmode_x);
-	if("<% nvram_get("wl_unit"); %>" == "0"){               //2.4GHz
+	if(wl_unit == "0"){               //2.4GHz
 		for(var i = 0; i < tmo2nmode.length; i++){
 			add_option(document.form.wl_nmode_x,tmo2nmode[i][1], tmo2nmode[i][0],(document.form.wl_nmode_x_orig.value == tmo2nmode[i][0]));
 		}
@@ -559,6 +605,11 @@ function enableSmartCon(val){
 	document.form.smart_connect_x.value = val;
 
 	if(val == 0){
+		if(based_modelid=="RT-AC5300"){
+			document.getElementById("smart_connect_field").style.display = "none";
+			document.getElementById("smartcon_rule_link").style.display = "none";
+		}
+
 		document.getElementById("wl_unit_field").style.display = "";
 		document.form.wl_nmode_x.disabled = "";
 		document.getElementById("wl_optimizexbox_span").style.display = "";
@@ -566,7 +617,7 @@ function enableSmartCon(val){
 			document.getElementById("wl_gmode_checkbox").style.display = "";
 		}
 		if(band5g_11ac_support){
-			regen_5G_mode(document.form.wl_nmode_x,'<% nvram_get("wl_unit"); %>')		
+			regen_5G_mode(document.form.wl_nmode_x, wl_unit)		
 		}else{
 			free_options(document.form.wl_nmode_x);
 			obj.options[0] = new Option("<#Auto#>", 0);
@@ -575,7 +626,12 @@ function enableSmartCon(val){
 		}
 		change_wl_nmode(document.form.wl_nmode_x);
 	}
-	else if(val == 1){
+	else if(val > 0){
+		if(based_modelid=="RT-AC5300"){
+			document.getElementById("smart_connect_field").style.display = "";
+			document.getElementById("smartcon_rule_link").style.display = "table-cell";
+		}
+
 		document.getElementById("wl_unit_field").style.display = "none";
 		regen_auto_option(document.form.wl_nmode_x);
 		document.getElementById("wl_optimizexbox_span").style.display = "none";
@@ -584,6 +640,9 @@ function enableSmartCon(val){
 		regen_auto_option(document.form.wl_channel);
 		regen_auto_option(document.form.wl_nctrlsb);
 	}
+	if(based_modelid=="RT-AC5300")
+		_change_smart_connect(val);
+
 }
 
 function regen_auto_option(obj){
@@ -705,7 +764,7 @@ function regen_auto_option(obj){
 			<table width="99%" border="1" align="center" cellpadding="4" cellspacing="0" id="WLgeneral" class="FormTable">
 
 			<tr id="smartcon_enable_field" style="display:none;">
-			  	<th width="30%"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(13,1);">Enabled Smart Connect</a></th>
+			  	<th width="30%"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(13,1);"><#smart_connect_enable#></a></th>	<!-- Enable Smart Connect -->
 			  	<td>
 			    	<div id="smartcon_enable_block" style="display:none;">
 			    		<span style="color:#FFF;" id="smart_connect_enable_word">&nbsp;&nbsp;</span>
@@ -713,7 +772,7 @@ function regen_auto_option(obj){
 			    		<br>
 			    	</div>
 						
-			    	<div class="left" style="width: 94px;" id="radio_smartcon_enable"></div>
+			    	<div id="radio_smartcon_enable" class="left" style="width: 94px;display:table-cell;"></div><div id="smartcon_rule_link" style="display:table-cell; vertical-align: middle;"><a href="Advanced_Smart_Connect.asp" style="font-family:Lucida Console;color:#FC0;text-decoration:underline;cursor:pointer;">Smart Connect Rule</a></div>
 						<div class="clear"></div>					
 						<script type="text/javascript">
 								var flag = '<% get_parameter("flag"); %>';
@@ -724,7 +783,7 @@ function regen_auto_option(obj){
 							else
 								smart_connect_flag_t = flag;
 
-								$('#radio_smartcon_enable').iphoneSwitch(smart_connect_flag_t>0, 
+								$('#radio_smartcon_enable').iphoneSwitch( smart_connect_flag_t > 0, 
 								 function() {
 									enableSmartCon(1);
 								 },
@@ -735,7 +794,15 @@ function regen_auto_option(obj){
 						</script>
 		  	  </td>
 			</tr>
-
+				<tr id="smart_connect_field" style="display:none;">                     
+					<th>Smart Connect</th>                                            
+					<td id="smart_connect_switch">
+					<select name="smart_connect_t" class="input_option" onChange="_change_smart_connect(this.value);">
+						<option class="content_input_fd" value="1" >Tri-band Smart Connect (2.4GHz, 5GHz-1 and 5GHz-2)</optio>
+						<option class="content_input_fd" value="2">5GHz Smart Connect (5GHz-1 and 5GHz-2)</option>
+					</select>                       
+					</td>
+				</tr>
 				<tr id="wl_unit_field">
 					<th><#Interface#></th>
 					<td>
@@ -804,10 +871,11 @@ function regen_auto_option(obj){
 					<th>						
 						<a id="wl_channel_select" class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 3);"><#WLANConfig11b_Channel_itemname#></a>						
 					</th>
-					<td>
+					<td>			
 				 		<select name="wl_channel" class="input_option" onChange="change_channel(this);"></select>
-						<span id="dfs_checkbox" style="display:none;"><input type="checkbox" onClick="check_DFS_support(this);" name="acs_dfs_checkbox" <% nvram_match("acs_dfs", "1", "checked"); %>>Auto select channel including DFS channels</input></span>
-						<span id="acs_band1_checkbox" style="display:none;"><input type="checkbox" onClick="check_acs_band1_support(this);"  <% nvram_match("acs_band1", "1", "checked"); %>>Auto select channel including band1 channels</input></span>
+						<span id="auto_channel" style="display:none;margin-left:10px;"></span><br>
+						<span id="dfs_checkbox" style="display:none"><input type="checkbox" onClick="check_DFS_support(this);" name="acs_dfs_checkbox" <% nvram_match("acs_dfs", "1", "checked"); %>><#WLANConfig11b_EChannel_dfs#></input></span>
+						<span id="acs_band1_checkbox" style="display:none;"><input type="checkbox" onClick="check_acs_band1_support(this);" <% nvram_match("acs_band1", "1", "checked"); %>><#WLANConfig11b_EChannel_band1#></input></span>
 					</td>
 			  </tr> 
 		  	<!-- end -->
@@ -906,12 +974,12 @@ function regen_auto_option(obj){
 			  	</tr>
 			  
 				<tr style="display:none">
-					<th>Protected Management Frames</th>
+					<th><#WLANConfig11b_x_mfp#></th>	<!-- Protected Management Frames -->
 					<td>
 				  		<select name="wl_mfp" class="input_option" >
 								<option value="0" <% nvram_match("wl_mfp", "0", "selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
-								<option value="1" <% nvram_match("wl_mfp", "1", "selected"); %>>Capable</option>
-								<option value="2" <% nvram_match("wl_mfp", "2", "selected"); %>>Required</option>
+								<option value="1" <% nvram_match("wl_mfp", "1", "selected"); %>><#WLANConfig11b_x_mfp_opt1#></option>	<!-- Capable -->
+								<option value="2" <% nvram_match("wl_mfp", "2", "selected"); %>><#WLANConfig11b_x_mfp_opt2#></option>	<!-- Required -->
 				  		</select>
 					</td>
 			  	</tr>
