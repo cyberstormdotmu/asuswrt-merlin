@@ -105,9 +105,10 @@ function initial() {
 		document.form.usb_idle_exclude_i.checked = true;
 
 	if ((productid == "RT-AC56U") || (productid == "RT-AC68U") || (productid == "RT-AC87U") ||
-	    (productid == "RT-AC3200") || (productid == "RT-AC88U") || (productid == "RT-AC3100") || (productid == "RT-AC5300"))
+	    (productid == "RT-AC3200") || (productid == "RT-AC88U") || (productid == "RT-AC3100") || (productid == "RT-AC5300")) {
 		document.getElementById("ct_established_default").innerHTML = "Default: 2400";
-
+		showhide("memory_mgmt_tr" ,1);
+	}
 	document.aidiskForm.protocol.value = PROTOCOL;
 	initial_dir();
 }
@@ -710,7 +711,7 @@ function done_validating(action){
 					</tr>
 
 					<tr id="rstats_stime_tr">
-						<th>Save frequency:</th>
+						<th>Save frequency</th>
 						<td>
 							<select name="rstats_stime" class="input_option" >
 								<option value="1" <% nvram_match("rstats_stime", "1","selected"); %>>Every 1 hour</option>
@@ -919,7 +920,7 @@ function done_validating(action){
 						</tr>
 					</thead>
 					<tr>
-						<th>Networkmap: hourly full network rescans (default: Yes)</th>
+						<th>Networkmap: Hourly full network rescans (default: Yes)</th>
 						<td>
 							<input type="radio" name="nmap_hm_scan" class="input" value="1" <% nvram_match_x("", "nmap_hm_scan", "1", "checked"); %>><#checkbox_Yes#>
 							<input type="radio" name="nmap_hm_scan" class="input" value="0" <% nvram_match_x("", "nmap_hm_scan", "0", "checked"); %>><#checkbox_No#>
@@ -932,8 +933,8 @@ function done_validating(action){
 							<input type="radio" name="smbd_enable_smb2" class="input" value="0" <% nvram_match_x("", "smbd_enable_smb2", "0", "checked"); %>><#checkbox_No#>
 						</td>
 	                                </tr>
-					<tr>
-						<th>Memory Management: Regularly flush caches (ARM only) (default: Yes)</th>
+					<tr id="memory_mgmt_tr" style="display:none;">
+						<th>Memory Management: Regularly flush caches (default: Yes)</th>
 						<td>
 							<input type="radio" name="drop_caches" class="input" value="1" <% nvram_match_x("", "drop_caches", "1", "checked"); %>><#checkbox_Yes#>
 							<input type="radio" name="drop_caches" class="input" value="0" <% nvram_match_x("", "drop_caches", "0", "checked"); %>><#checkbox_No#>
@@ -947,14 +948,14 @@ function done_validating(action){
 						</td>
 					</tr>
 					<tr>
-						<th>DLNA: Run a full media rescan at start (default: Yes)</th>
+						<th>DLNA: Rebuild entire database at start (default: No)</th>
 						<td>
-							<input type="radio" name="dms_rescan" class="input" value="1" <% nvram_match_x("", "dms_rescan", "1", "checked"); %>><#checkbox_Yes#>
-							<input type="radio" name="dms_rescan" class="input" value="0" <% nvram_match_x("", "dms_rescan", "0", "checked"); %>><#checkbox_No#>
+							<input type="radio" name="dms_rebuild" class="input" value="1" <% nvram_match_x("", "dms_rebuild", "1", "checked"); %>><#checkbox_Yes#>
+							<input type="radio" name="dms_rebuild" class="input" value="0" <% nvram_match_x("", "dms_rebuild", "0", "checked"); %>><#checkbox_No#>
 						</td>
 					</tr>
 					<tr>
-						<th>firewall: Drop IPv6 neighbour solicitation broadcasts (Comcast fix) (default: No)</th>
+						<th>Firewall: Drop IPv6 neighbour solicitation broadcasts (Comcast fix) (default: No)</th>
 						<td>
 							<input type="radio" name="ipv6_ns_drop" class="input" value="1" <% nvram_match_x("", "ipv6_ns_drop", "1", "checked"); %>><#checkbox_Yes#>
 							<input type="radio" name="ipv6_ns_drop" class="input" value="0" <% nvram_match_x("", "ipv6_ns_drop", "0", "checked"); %>><#checkbox_No#>

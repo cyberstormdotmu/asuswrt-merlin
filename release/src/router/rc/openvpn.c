@@ -31,6 +31,8 @@
 #define BUF_SIZE 256
 #define IF_SIZE 8
 
+extern struct nvram_tuple router_defaults[];
+
 static int ovpn_waitfor(const char *name)
 {
 	int pid, n = 5;
@@ -1754,7 +1756,7 @@ int write_vpn_resolv(FILE* f)
 
 			// Don't modify dnsmasq if policy routing is enabled and dns mode set to "Exclusive"
 			snprintf(&buf[0], sizeof(buf), "vpn_client%c_rgw", num);
-			if ((nvram_get_int(&buf[0]) == 3 ) && (level == 3))
+			if ((nvram_get_int(&buf[0]) == 2 ) && (level == 3))
 				continue;
 
 			if ( (dnsf = fopen(fn, "r")) == NULL )
@@ -1855,5 +1857,81 @@ void update_vpnrouting(int unit){
 	char tmp[56];
 	snprintf(tmp, sizeof (tmp), "dev=tun1%d script_type=rmupdate /usr/sbin/vpnrouting.sh", unit);
 	system(tmp);
+}
+
+
+void reset_vpn_settings(int type, int unit){
+        struct nvram_tuple *t;
+        char prefix[]="vpn_serverX_", tmp[100];
+        char word[256], *next;
+	char *service;
+
+	if (type == 1)
+		service = "server";
+	else if (type == 2)
+		service = "client";
+	else
+		return;
+
+	logmessage("openvpn","Resetting %s (unit %d) to default settings", service, unit);
+
+	snprintf(prefix, sizeof(prefix), "vpn_%s%d_", service, unit);
+
+	for (t = router_defaults; t->name; t++) {
+		if (strncmp(t->name, prefix, 12)==0) {
+			nvram_set(t->name, t->value);
+		}
+	}
+
+#if 0	// Rename
+	logmessage("openvpn", "Preserving backup of key/certs as .old files");
+	if (type == 1)	// server-only files
+	{
+		sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_ca_key /jffs/openvpn/vpn_crt_%s%d_ca_key.old", service, unit, service, unit);
+		system(tmp);
+		sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_client_crt /jffs/openvpn/vpn_crt_%s%d_client_crt.old", service, unit, service, unit);
+		system(tmp);
+		sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_client_key /jffs/openvpn/vpn_crt_%s%d_client_key.old", service, unit, service, unit);
+		system(tmp);
+		sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_dh /jffs/openvpn/vpn_crt_%s%d_dh.old", service, unit, service, unit);
+		system(tmp);
+	}
+
+	sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_ca /jffs/openvpn/vpn_crt_%s%d_ca.old", service, unit, service, unit);
+	system(tmp);
+	sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_crt /jffs/openvpn/vpn_crt_%s%d_crt.old", service, unit, service, unit);
+	system(tmp);
+	sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_key /jffs/openvpn/vpn_crt_%s%d_key.old", service, unit, service, unit);
+	system(tmp);
+	sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_crl /jffs/openvpn/vpn_crt_%s%d_crl.old", service, unit, service, unit);
+	system(tmp);
+	sprintf(tmp, "mv /jffs/openvpn/vpn_crt_%s%d_static /jffs/openvpn/vpn_crt_%s%d_static.old", service, unit, service, unit);
+	system(tmp);
+
+#else	// Delete
+	if (type == 1)  // server-only files
+	{
+		sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_ca_key", service, unit);
+		unlink(tmp);
+		sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_client_crt", service, unit);
+		unlink(tmp);
+		sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_client_key", service, unit);
+		unlink(tmp);
+		sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_dh", service, unit);
+		unlink(tmp);
+	}
+
+	sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_ca", service, unit);
+	unlink(tmp);
+	sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_crt", service, unit);
+	unlink(tmp);
+	sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_key", service, unit);
+	unlink(tmp);
+	sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_crl", service, unit);
+	unlink(tmp);
+	sprintf(tmp, "/jffs/openvpn/vpn_crt_%s%d_static", service, unit);
+	unlink(tmp);
+#endif
+
 }
 

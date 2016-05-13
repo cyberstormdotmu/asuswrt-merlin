@@ -200,7 +200,7 @@ ej_get_upnp_array(int eid, webs_t wp, int argc, char_t **argv)
 
 	ret += websWrite(wp, "var upnparray = [");
 
-	fp = fopen("/var/lib/misc/upnp.leases", "r");
+	fp = fopen("/tmp/upnp.leases", "r");
 	if (fp == NULL) {
 		ret += websWrite(wp, "[]];\n");
 		return ret;
@@ -214,7 +214,7 @@ ej_get_upnp_array(int eid, webs_t wp, int argc, char_t **argv)
 			"%15[^:]:"
 			"%5[^:]:"
 			"%14[^:]:"
-			"%200[^\n]",
+			"%199[^\n]",
 			proto, eport, iaddr, iport, timestamp, desc) < 6) continue;
 
 		if (str_escape_quotes(desc2, desc, sizeof(desc2)) == 0)

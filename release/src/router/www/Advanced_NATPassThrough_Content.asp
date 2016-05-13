@@ -100,7 +100,8 @@ function applyRule(){
     	       					<td>
 												<select name="fw_pt_rtsp" class="input_option">
 													<option class="content_input_fd" value="0" <% nvram_match("fw_pt_rtsp", "0","selected"); %>><#btn_disable#></option>
-													<option class="content_input_fd" value="1"<% nvram_match("fw_pt_rtsp", "1","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+													<option class="content_input_fd" value="2"<% nvram_match("fw_pt_rtsp", "2","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+													<option class="content_input_fd" value="1"<% nvram_match("fw_pt_rtsp", "1","selected"); %>>Enabled + NAT helper</option>
 												</select>			
         	    				</td>
            					</tr>
@@ -110,17 +111,19 @@ function applyRule(){
 						<td>
 												<select name="fw_pt_h323" class="input_option">
 													<option class="content_input_fd" value="0" <% nvram_match("fw_pt_h323", "0","selected"); %>><#btn_disable#></option>
-													<option class="content_input_fd" value="1"<% nvram_match("fw_pt_h323", "1","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+													<option class="content_input_fd" value="2"<% nvram_match("fw_pt_h323", "2","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+													<option class="content_input_fd" value="1"<% nvram_match("fw_pt_h323", "1","selected"); %>>Enabled + NAT helper</option>
 												</select>
 						</td>
 						</tr>
 
 						<tr>
-							<th>Enable SIP NAT helper</th>
+							<th><#NAT_SIP_Passthrough#></th>
 						<td>
 												<select name="fw_pt_sip" class="input_option">
 													<option class="content_input_fd" value="0" <% nvram_match("fw_pt_sip", "0","selected"); %>><#btn_disable#></option>
-													<option class="content_input_fd" value="1"<% nvram_match("fw_pt_sip", "1","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+													<option class="content_input_fd" value="2"<% nvram_match("fw_pt_sip", "2","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+													<option class="content_input_fd" value="1"<% nvram_match("fw_pt_sip", "1","selected"); %>>Enabled + NAT helper</option>
 												</select>
 						</td>
 						</tr>

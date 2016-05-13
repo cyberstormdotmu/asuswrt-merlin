@@ -1,4 +1,4 @@
-Asuswrt-Merlin - build 380.58 (20-Mar-2016)
+Asuswrt-Merlin - build 380.59 (10-May-2016)
 ===========================================
 
 About
@@ -57,7 +57,7 @@ Here is a list of features that Asuswrt-merlin adds over the original
 firmware:
 
 System:
-   - Based on 3.0.0.4.380_1354 source code from Asus
+   - Based on 3.0.0.4.380_2697 source code from Asus
    - Various bugfixes and optimizations
    - Some components were updated to newer versions, for improved
      stability and security
@@ -98,6 +98,8 @@ Networking:
    - Policy routing for the OpenVPN client (based on source or
      destination IPs), sometimes referred to as "selective routing")
    - DNSSEC support
+   - Experimental support for fq_codel in Traditionnal QoS
+     (ARM-based models only)
 
 
 Web interface:
@@ -651,8 +653,8 @@ config files must be enabled under Administration -> System.
 
 
 
-OpenVPN client policy routing
------------------------------
+** OpenVPN client policy routing **
+
 When configuring your router to act as an OpenVPN client (for instance 
 to connect your whole LAN to an OpenVPN tunnel provider), you can 
 define policies that determines which clients, or which destinations 
@@ -702,12 +704,12 @@ https://github.com/RMerl/asuswrt-merlin
 Contact information
 -------------------
 SmallNetBuilder forums (preferred method: http://www.snbforums.com/forums/asuswrt-merlin.42/ as RMerlin)
-Website: http://asuswrt.lostrealm.ca/
+Website: https://asuswrt.lostrealm.ca/
 Github: https://github.com/RMerl/asuswrt-merlin
 Email: rmerl@lostrealm.ca
 Twitter: https://twitter.com/RMerlinDev
 IRC: #asuswrt on DALnet
-Download: http://asuswrt.lostrealm.ca/download
+Download: https://asuswrt.lostrealm.ca/download
 
 Development news will be posted on Twitter.  You can also keep a closer 
 eye on development as it happens through the Github site.
