@@ -1942,7 +1942,6 @@ int init_nvram(void)
 			case MODEL_WS880:
 				nvram_set("clkfreq", "800,533");
 				break;
-#endif
 		}
 	}
 

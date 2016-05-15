@@ -1098,7 +1098,7 @@ static inline int is_usb3_port(char *usb_node)
 #define MIB_RX_REG 0x88
 #define MIB_TX_REG 0x00
 
-#if defined(RTN18U) || defined(RTAC56U) || defined(RTAC56S) || defined(RTAC68U) || defined(RTAC3200)
+#if defined(RTN18U) || defined(RTAC56U) || defined(RTAC56S) || defined(RTAC68U) || defined(RTAC3200) || defined(R8000) || defined(EA9200) || defined(EA6900) || defined(R7000) || defined(WS880)
 #define CPU_PORT "5"
 #endif
 

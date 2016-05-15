@@ -3126,7 +3126,7 @@ static void led_bh_prep(int post)
 				eval("wl", "maxassoc", "0");
 				eval("wlconf", "eth2", "up");
 				eval("wl", "-i", "eth2", "maxassoc", "0");
-#if defined(RTAC3200) || defined(RTAC5300) || defined(R8000) || defined(EA9200
+#if defined(RTAC3200) || defined(RTAC5300) || defined(R8000) || defined(EA9200)
 				eval("wlconf", "eth3", "up");
 				eval("wl", "-i", "eth3", "maxassoc", "0");
 #endif
