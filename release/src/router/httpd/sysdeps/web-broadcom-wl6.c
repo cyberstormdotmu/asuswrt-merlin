@@ -1475,7 +1475,7 @@ ej_wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 				ret += websWrite(wp, "%-11s%-11s", (sta->flags & WL_STA_ASSOC) ? "Yes" : " ", (sta->flags & WL_STA_AUTHO) ? "Yes" : "");
 
 				memcpy(&scb_val.ea, &auth->ea[ii], ETHER_ADDR_LEN);
-				if (wl_ioctl(name, WLC_GET_RSSI, &scb_val, sizeof(scb_val_t)))
+				if (wl_ioctl(name_vif, WLC_GET_RSSI, &scb_val, sizeof(scb_val_t)))
 					ret += websWrite(wp, "%-8s", "");
 				else
 					ret += websWrite(wp, "%4ddBm ", scb_val.val);
@@ -3188,6 +3188,13 @@ static int wl_sta_list(int eid, webs_t wp, int argc, char_t **argv, int unit) {
 	int ii;
 	int ret = 0;
 	sta_info_t *sta;
+	int from_app = 0;
+	char *name_t = NULL;
+
+	if (ejArgs(argc, argv, "%s", &name_t) < 1) {
+		//_dprintf("name_t = NULL\n");
+	}else if(!strncmp(name_t, "appobj", 6))
+		from_app = 1;
 
 	/* buffers and length */
 	mac_list_size = sizeof(auth->count) + MAX_STA_COUNT * sizeof(struct ether_addr);
@@ -3216,23 +3223,46 @@ static int wl_sta_list(int eid, webs_t wp, int argc, char_t **argv, int unit) {
 		else
 			ret += websWrite(wp, ", ");
 
-		ret += websWrite(wp, "[");
+		if(from_app == 0)
+			ret += websWrite(wp, "[");
 
 		ret += websWrite(wp, "\"%s\"", ether_etoa((void *)&auth->ea[i], ea));
 
+		if(from_app == 1){
+			ret += websWrite(wp, ":{");
+			ret += websWrite(wp, "\"isWL\":");
+		}
+
 		value = (sta->flags & WL_STA_ASSOC) ? "Yes" : "No";
-		ret += websWrite(wp, ", \"%s\"", value);
+		if(from_app == 0)
+			ret += websWrite(wp, ", \"%s\"", value);
+		else
+			ret += websWrite(wp, "\"%s\"", value);
 
 		value = (sta->flags & WL_STA_AUTHO) ? "Yes" : "No";
-		ret += websWrite(wp, ", \"%s\"", value);
+		if(from_app == 0)
+			ret += websWrite(wp, ", \"%s\"", value);
+
+		if(from_app == 1){
+			ret += websWrite(wp, ",\"rssi\":");
+		}
 
 		memcpy(&scb_val.ea, &auth->ea[i], ETHER_ADDR_LEN);
-		if (wl_ioctl(name, WLC_GET_RSSI, &scb_val, sizeof(scb_val_t)))
-			ret += websWrite(wp, ", \"%d\"", 0);
+		if (wl_ioctl(name, WLC_GET_RSSI, &scb_val, sizeof(scb_val_t))){
+			if(from_app == 0)
+				ret += websWrite(wp, ", \"%d\"", 0);
+			else
+				ret += websWrite(wp, "\"%d\"", 0);
+		}else{
+			if(from_app == 0)
+				ret += websWrite(wp, ", \"%d\"", scb_val.val);
+			else
+				ret += websWrite(wp, "\"%d\"", scb_val.val);
+		}
+		if(from_app == 0)
+			ret += websWrite(wp, "]");
 		else
-			ret += websWrite(wp, ", \"%d\"", scb_val.val);
-
-		ret += websWrite(wp, "]");
+			ret += websWrite(wp, "}");
 	}
 
 	for (i = 1; i < 4; i++) {
@@ -3262,23 +3292,46 @@ static int wl_sta_list(int eid, webs_t wp, int argc, char_t **argv, int unit) {
 				else
 					ret += websWrite(wp, ", ");
 
-				ret += websWrite(wp, "[");
+				if(from_app == 0)
+					ret += websWrite(wp, "[");
 
 				ret += websWrite(wp, "\"%s\"", ether_etoa((void *)&auth->ea[ii], ea));
 
+				if(from_app == 1){
+					ret += websWrite(wp, ":{");
+					ret += websWrite(wp, "\"isWL\":");
+				}
+
 				value = (sta->flags & WL_STA_ASSOC) ? "Yes" : "No";
-				ret += websWrite(wp, ", \"%s\"", value);
+				if(from_app == 0)
+					ret += websWrite(wp, ", \"%s\"", value);
+				else
+					ret += websWrite(wp, "\"%s\"", value);
 
 				value = (sta->flags & WL_STA_AUTHO) ? "Yes" : "No";
-				ret += websWrite(wp, ", \"%s\"", value);
+				if(from_app == 0)
+					ret += websWrite(wp, ", \"%s\"", value);
+
+				if(from_app == 1){
+					ret += websWrite(wp, ",\"rssi\":");
+				}
 
 				memcpy(&scb_val.ea, &auth->ea[ii], ETHER_ADDR_LEN);
-				if (wl_ioctl(name, WLC_GET_RSSI, &scb_val, sizeof(scb_val_t)))
-					ret += websWrite(wp, ", \"%d\"", 0);
+				if (wl_ioctl(name_vif, WLC_GET_RSSI, &scb_val, sizeof(scb_val_t))){
+					if(from_app == 0)
+						ret += websWrite(wp, ", \"%d\"", 0);
+					else
+						ret += websWrite(wp, "\"%d\"", 0);
+				}else{
+					if(from_app == 0)
+						ret += websWrite(wp, ", \"%d\"", scb_val.val);
+					else
+						ret += websWrite(wp, "\"%d\"", scb_val.val);
+				}
+				if(from_app == 0)
+					ret += websWrite(wp, "]");
 				else
-					ret += websWrite(wp, ", \"%d\"", scb_val.val);
-
-				ret += websWrite(wp, "]");
+					ret += websWrite(wp, "}");
 			}
 		}
 	}
@@ -3298,8 +3351,6 @@ static int wl_stainfo_list(int eid, webs_t wp, int argc, char_t **argv, int unit
 	int mac_list_size;
 	int i, firstRow = 1;
 	char ea[ETHER_ADDR_STR_LEN];
-	scb_val_t scb_val;
-	char *value;
 	char name_vif[] = "wlX.Y_XXXXXXXXXX";
 	int ii;
 	int ret = 0;
@@ -3963,7 +4014,7 @@ ej_wl_status_2g_array(int eid, webs_t wp, int argc, char_t **argv)
 static int
 dump_bss_info_array(int eid, webs_t wp, int argc, char_t **argv, wl_bss_info_t *bi)
 {
-	char ssidbuf[SSID_FMT_BUF_LEN];
+	char ssidbuf[SSID_FMT_BUF_LEN*2], ssidbuftmp[SSID_FMT_BUF_LEN];
 	char chspec_str[CHANSPEC_STR_LEN];
 	wl_bss_info_107_t *old_bi;
 	int retval = 0;
@@ -3981,7 +4032,10 @@ dump_bss_info_array(int eid, webs_t wp, int argc, char_t **argv, wl_bss_info_t *
 		bi->chanspec = wl_chspec_from_driver(bi->chanspec);
 	}
 
-	wl_format_ssid(ssidbuf, bi->SSID, bi->SSID_len);
+	wl_format_ssid(ssidbuftmp, bi->SSID, bi->SSID_len);
+
+	if (str_escape_quotes(ssidbuf, ssidbuftmp, sizeof(ssidbuf)) == 0 )
+		strncpy(ssidbuf, ssidbuftmp, sizeof(ssidbuf));
 
 	retval += websWrite(wp, "\"%s\",", ssidbuf);
 	retval += websWrite(wp, "\"%d\",", (int16)(dtoh16(bi->RSSI)));
@@ -4009,7 +4063,7 @@ wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	int ret;
 	struct ether_addr bssid;
 	wlc_ssid_t ssid;
-	char ssidbuf[SSID_FMT_BUF_LEN];
+	char ssidbuf[SSID_FMT_BUF_LEN*2], ssidbuftmp[SSID_FMT_BUF_LEN];
 	wl_bss_info_t *bi;
 	int retval = 0;
 	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
@@ -4040,7 +4094,11 @@ wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 			return 0;
 		}
 
-		wl_format_ssid(ssidbuf, ssid.SSID, dtoh32(ssid.SSID_len));
+		wl_format_ssid(ssidbuftmp, ssid.SSID, dtoh32(ssid.SSID_len));
+
+		if (str_escape_quotes(ssidbuf, ssidbuftmp, sizeof(ssidbuf)) == 0 )
+			strncpy(ssidbuf, ssidbuftmp, sizeof(ssidbuf));
+
 		retval += websWrite(wp, "%s\",\"\",\"\",\"\",\"\",\"\",", ssidbuf);
 	}
 
@@ -4058,7 +4116,7 @@ ej_wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	int i, ii, val = 0, ret = 0;
 	char *arplist = NULL, *arplistptr;
 	char *leaselist = NULL, *leaselistptr;
-	char hostnameentry[16];
+	char hostnameentry[32];
 	char ipentry[40], macentry[18];
 	int found, noclients = 0;
 	char rxrate[12], txrate[12];
@@ -4135,7 +4193,7 @@ ej_wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 			ret += wl_status_5g_array(eid, wp, argc, argv);
 		else
 #endif
-		ret += wl_status_array(eid, wp, argc, argv, unit);
+			ret += wl_status_array(eid, wp, argc, argv, unit);
 	}
 
 	if (nvram_match(strcat_r(prefix, "mode", tmp), "ap"))
@@ -4194,7 +4252,7 @@ ej_wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	else
 		ret += websWrite(wp, "wificlients24 = [");
 
-	#ifdef RTCONFIG_QTN
+#ifdef RTCONFIG_QTN
 	if (unit && rpc_qtn_ready())
 	{
 		ret += ej_wl_status_5g_array(eid, wp, argc, argv);
@@ -4265,7 +4323,7 @@ ej_wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 		if (leaselist) {
 			leaselistptr = leaselist;
 
-			while ((leaselistptr < leaselist+strlen(leaselist)-2) && (sscanf(leaselistptr,"%*s %17s %15s %15s %*s", macentry, ipentry, hostnameentry) == 3)) {
+			while ((leaselistptr < leaselist+strlen(leaselist)-2) && (sscanf(leaselistptr,"%*s %17s %15s %15s %*s", macentry, ipentry, tmp) == 3)) {
 				if (upper_strcmp(macentry, ether_etoa((void *)&auth->ea[i], ea)) == 0) {
 					found += 2;
 					break;
@@ -4273,6 +4331,9 @@ ej_wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 					leaselistptr = strstr(leaselistptr,"\n")+1;
 				}
 			}
+			if ((found) && (str_escape_quotes(hostnameentry, tmp, sizeof(hostnameentry)) == 0 ))
+				strncpy(hostnameentry, tmp, sizeof(hostnameentry));
+
 			if (found == 0) {
 				// Not in arplist nor in leaselist
 				ret += websWrite(wp, "\"<not found>\",\"<not found>\",");
@@ -4381,7 +4442,7 @@ ej_wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 				if (leaselist) {
 					leaselistptr = leaselist;
 
-					while ((leaselistptr < leaselist+strlen(leaselist)-2) && (sscanf(leaselistptr,"%*s %17s %15s %15s %*s", macentry, ipentry, hostnameentry) == 3)) {
+					while ((leaselistptr < leaselist+strlen(leaselist)-2) && (sscanf(leaselistptr,"%*s %17s %15s %15s %*s", macentry, ipentry, tmp) == 3)) {
 						if (upper_strcmp(macentry, ether_etoa((void *)&auth->ea[ii], ea)) == 0) {
 							found += 2;
 							break;
@@ -4389,6 +4450,10 @@ ej_wl_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 							leaselistptr = strstr(leaselistptr,"\n")+1;
 						}
 					}
+
+					if ((found) && (str_escape_quotes(hostnameentry, tmp,sizeof(hostnameentry)) == 0 ))
+						strncpy(hostnameentry, tmp, sizeof(hostnameentry));
+
 					if (found == 0) {
 						// Not in arplist nor in leaselist
 						ret += websWrite(wp, "\"<not found>\",\"<not found>\",");

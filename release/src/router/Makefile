@@ -33,7 +33,6 @@ ifeq ($(RTCONFIG_BCMARM),y)
 export CFLAGS += -DMFP
 export CFLAGS += -D__CONFIG_MFP__
 export CLFAGS += -DWLWNM
-export MFP_TEST=1
 endif
 endif
 export CFLAGS += $(EXTRACFLAGS)
@@ -67,6 +66,11 @@ export BCMSRC=src-rt-7.14.94.x/src
 export OLD_SRC=$(SRCBASE)/../../src
 export  BUILD_MFG := 0
 export  EX7 := _794
+else ifeq ($(RTCONFIG_BCM_7114),y)
+export BCMSRC=src-rt-7.14.114.x/src
+export OLD_SRC=$(SRCBASE)/../../src
+export  BUILD_MFG := 0
+export  EX7 := _7114
 else ifeq ($(RTCONFIG_BCM10),y)
 export BCMSRC=src-rt-10.10.22.x/src
 export OLD_SRC=$(SRCBASE)/../../src
@@ -126,10 +130,14 @@ export KDIR KERNEL_HEADER_DIR
 ifeq ($(RTCONFIG_DHDAP),y)
 export CONFIG_DHDAP=y
 export CFLAGS += -D__CONFIG_DHDAP__
+ifeq ($(RTCONFIG_BCM_7114),y)
+export SRCBASE_DHD := $(SRCBASE)/../dhd/src
+export SRCBASE_SYS := $(SRCBASE_DHD)
+include Makefile.fw
+else	# 7114
 export DHDAP_USE_SEPARATE_CHECKOUTS := 1
 export SRCBASE_DHD := $(SRCBASE)/../../dhd/src
 export SRCBASE_FW  := $(SRCBASE)/../../43602/src
-
 PCIEFD_TARGETS_LIST	:= 43602a1-roml
 ifeq ($(WLTEST),1)
 PCIEFD_TARGET_NAME	:= pcie-ag-splitrx-fdap-mbss-mfgtest-seqcmds-phydbg-txbf-pktctx-amsdutx-ampduretry-chkd2hdma
@@ -141,6 +149,7 @@ PCIEFD_EMBED_HEADER_TEMPLATE := $(SRCBASE_DHD)/shared/rtecdc_router.h.in
 PCIEFD_EMBED_HEADER	:= $(SRCBASE_DHD)/shared/rtecdc_router.h
 obj-pciefd		:= $(patsubst %,%-obj,$(PCIEFD_TARGETS_LIST))
 install-pciefd		:= $(patsubst %,%-install,$(PCIEFD_TARGETS_LIST))
+endif	#  7114
 endif
 
 ifeq ($(RTCONFIG_GMAC3),y)
@@ -190,6 +199,10 @@ ifeq ($(RTCONFIG_DEBUG),y)
 export CFLAGS += -g
 endif
 
+ifeq ($(RTCONFIG_SFP)$(RTCONFIG_4M_SFP),y)
+export  MUVER := _1.4
+endif
+
 #
 #
 #
@@ -201,8 +214,8 @@ SEP=echo "\033[41;1m   $@   \033[0m"
 obj-$(RTCONFIG_QTN) += libqcsapi_client
 obj-$(RTCONFIG_DMALLOC) += dmalloc
 
-obj-$(RTCONFIG_DHDAP) += pciefd dhd
-obj-$(RTCONFIG_DHDAP) += dhd
+obj-$(RTCONFIG_DHDAP) += dhd pciefd
+obj-$(RTCONFIG_BCM_7114) += dhd_monitor
 obj-y += busybox
 obj-y += shared
 obj-y += nvram$(BCMEX)
@@ -319,6 +332,7 @@ obj-y += nas$(BCMEX)$(EX7)
 obj-$(RTCONFIG_HSPOT) += hspot_ap$(BCMEX)$(EX7)
 obj-y += eapd$(BCMEX)$(EX7)/linux
 obj-$(RTCONFIG_WPS) += wps$(BCMEX)$(EX7)
+obj-$(RTCONFIG_WLEXE) += wlexe
 endif
 obj-$(CONFIG_LIBBCM) += libbcm
 obj-$(CONFIG_LIBUPNP) += libupnp$(BCMEX)$(EX7)
@@ -350,10 +364,12 @@ obj-$(RTCONFIG_USB_MODEM) += comgt-0.32
 obj-$(RTCONFIG_USB_MODEM) += uqmi
 
 ifneq ($(or $(findstring linux-2.6.36.x,$(LINUXDIR)),$(findstring linux-2.6.36,$(LINUXDIR)),$(findstring linux-3.x,$(LINUXDIR)),$(findstring linux-3.3.x,$(LINUXDIR))),)
-ifeq ($(or $(RTN65U),$(RTAC55U),$(RTAC55UHP)),y)
+ifeq ($(or $(RTN65U),$(RTAC55U),$(RTAC55UHP),$(RTN56UB1)),y)
 obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch-1.2.3
 else
+ifneq ($(RT4GAC55U),y)
 obj-$(RTCONFIG_USB_MODEM) += usb-modeswitch-2.2.0
+endif
 endif
 else
 obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch
@@ -525,7 +541,7 @@ obj-$(RTCONFIG_WEBDAV) += libexif
 obj-$(RTCONFIG_IXIAEP) += ixia_endpoint$(BCMEX)
 
 # Add for ASUS Components
-obj-y += miniupnpd
+obj-y += miniupnpd$(MUVER)
 obj-y += igmpproxy
 obj-y += snooper
 ifeq ($(RTCONFIG_BCMWL6),y)
@@ -544,9 +560,9 @@ else
 obj-y += lltd
 endif
 ifeq ($(RTCONFIG_BCMWL6),y)
-ifneq ($(RTCONFIG_BCM10),y)
+#ifneq ($(RTCONFIG_BCM10),y)
 obj-y += acsd$(BCMEX)$(EX7)
-endif
+#endif
 endif
 else
 obj-y += lldt
@@ -628,6 +644,8 @@ obj-$(RTCONFIG_TR069) += openssl
 obj-$(RTCONFIG_TR069) += tr069
 
 obj-$(RTCONFIG_CLOUDCHECK) += cloudcheck
+
+obj-$(RTCONFIG_GETREALIP) += ministun
 
 
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
@@ -1076,8 +1094,10 @@ ifeq ($(RTCONFIG_ROMATECCODEFIX),y)
 endif
 ifeq ($(RTCONFIG_QTN),y)
 	# install qtn boot-code and firmware
-	install -D qtnimage/topaz-linux.lzma.img $(TARGETDIR)/rom/qtn/topaz-linux.lzma.img
-	install -D qtnimage/u-boot.bin $(TARGETDIR)/rom/qtn/u-boot.bin
+	install -D qtnimage/topaz-linux.lzma.img $(TARGETDIR)/rom/qtn/boot/topaz-linux.lzma.img
+	install -D qtnimage/u-boot.bin $(TARGETDIR)/rom/qtn/boot/u-boot.bin
+	ln -s /rom/qtn/boot/topaz-linux.lzma.img $(TARGETDIR)/rom/qtn/topaz-linux.lzma.img
+	ln -s /rom/qtn/boot/u-boot.bin $(TARGETDIR)/rom/qtn/u-boot.bin
 	install -D qtnimage/router_command.sh $(TARGETDIR)/rom/qtn/router_command.sh
 	install -D qtnimage/qtn_dbg.sh $(TARGETDIR)/rom/qtn/qtn_dbg.sh
 	install -D qtnimage/start-stateless-slave $(TARGETDIR)/rom/qtn/start-stateless-slave
@@ -1088,11 +1108,28 @@ endif
 	install -D curl-7.21.7/src/.libs/curl $(TARGETDIR)/usr/sbin/curl
 	$(STRIP) $(TARGETDIR)/usr/sbin/curl
 #endif
+
 ifeq ($(RTCONFIG_BWDPI),y)
 ifeq ($(RTCONFIG_BCM7),y)
 	cp $(TOP)/bwdpi_bin/bwdpi_bcm7/* $(TOP)/bwdpi_bin/
 else
-	cp $(TOP)/bwdpi_bin/bwdpi_bcm6/* $(TOP)/bwdpi_bin/
+ifeq ($(RTCONFIG_BCMSMP),y)
+ifeq ($(RTCONFIG_CTF_PPTP_L2TP),y)
+	# SMP with PPTP_L2TP
+	cp $(TOP)/bwdpi_bin/bwdpi_bcm6_smp_pptp/* $(TOP)/bwdpi_bin/
+else
+	# SMP without PPTP_L2TP
+	cp $(TOP)/bwdpi_bin/bwdpi_bcm6_smp/* $(TOP)/bwdpi_bin/
+endif
+else
+ifeq ($(RTCONFIG_CTF_PPTP_L2TP),y)
+	# UP with PPTP_L2TP
+	cp $(TOP)/bwdpi_bin/bwdpi_bcm6_up_pptp/* $(TOP)/bwdpi_bin/
+else
+	# UP without PPTP_L2TP
+	cp $(TOP)/bwdpi_bin/bwdpi_bcm6_up/* $(TOP)/bwdpi_bin/
+endif
+endif
 endif
 	install -d $(TARGETDIR)/usr/bwdpi/
 	cp -f bwdpi_bin/*.so $(TARGETDIR)/usr/lib/
@@ -1186,12 +1223,22 @@ ifeq ($(RTCONFIG_BCMARM),y)
 	$(MAKE) compressed-clean
 endif
 ifeq ($(RTCONFIG_DHDAP),y)
+ifeq ($(RTCONFIG_BCM7),y)
 ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
 ifeq ($(wildcard /projects/hnd/tools/linux/hndtools-armeabi-2011.09),)
 	# build 43602 src and to match its path
 	sudo mkdir /projects/hnd/tools/linux -p
 	sudo rm -rf /projects/hnd/tools/linux/hndtools-armeabi-2011.09
 	sudo ln -sf $(SRCBASE)/toolchains/hndtools-armeabi-2011.09 /projects/hnd/tools/linux/hndtools-armeabi-2011.09
+endif
+endif
+else ifeq ($(RTCONFIG_BCM_7114),y)
+ifeq ($(wildcard /projects/hnd/tools/linux/hndtools-armeabi-2013.11),)
+	# build pciefd
+	sudo mkdir /projects/hnd/tools/linux/bin -p
+	sudo rm -rf /projects/hnd/tools/linux/hndtools-armeabi-2013.11
+	sudo ln -sf $(SRCBASE)/toolchains/hndtools-armeabi-2013.11 /projects/hnd/tools/linux/hndtools-armeabi-2013.11
+	sudo ln -sf $(SRCBASE)/toolchains/fwtag.ini /projects/hnd/tools/linux/bin/fwtag.ini
 endif
 endif
 endif
@@ -1451,6 +1498,7 @@ dmalloc-clean:
 	[ ! -f dmalloc/Makefile ] || $(MAKE) -C dmalloc clean
 	-rm -f dmalloc/{conf.h,dmalloc.h,dmalloc.h.2,settings.h,Makefile}
 
+ifeq ($(RTCONFIG_BCM7),y)
 $(obj-pciefd) :
 # Build PCIEFD firmware only if it is not prebuilt
 ifeq ($(RTCONFIG_DHDAP),y)
@@ -1493,17 +1541,18 @@ endif
 pciefd-install :
 	# Nothing to be done here
 	@true
+endif	# BCM7
 
 ifeq ($(RTCONFIG_DHDAP),y)
 dhd:
 	@true
-ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
-	$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_DHD)/dhd/exe
-endif
+#ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
+#	$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_DHD)/dhd/exe
+#endif
 
 dhd-clean :
 ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
-	$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_DHD)/dhd/exe clean
+#	$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_DHD)/dhd/exe clean
 	rm -f $(INSTALLDIR)/dhd/usr/sbin/dhd
 	cd $(SRCBASE_DHD) && rm -f `find ./ -name "*.cmd" && find ./ -name "*.o"`
 endif
@@ -1515,6 +1564,24 @@ ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
 	$(STRIP) $(INSTALLDIR)/dhd/usr/sbin/dhd
 endif
 endif
+
+.PHONY: dhd_monitor
+
+dhd_monitor: shared nvram$(BCMEX)
+ifeq ($(RTCONFIG_DHDAP),y)
+	+$(MAKE) LINUXDIR=$(LINUXDIR) EXTRA_LDFLAGS=$(EXTRA_LDFLAGS) -C dhd_monitor dhd_monitor
+endif
+
+dhd_monitor-install: dhd_monitor
+ifeq ($(RTCONFIG_DHDAP),y)
+	+$(MAKE) -C dhd_monitor INSTALLDIR=$(INSTALLDIR)/dhd_monitor install
+endif
+
+dhd_monitor-clean:
+ifeq ($(RTCONFIG_DHDAP),y)
+	+$(MAKE) -C dhd_monitor clean
+endif
+
 
 dnsmasq:
 	@$(SEP)
@@ -1618,25 +1685,25 @@ iptables-1.4.x-clean:
 
 upnp: nvram$(BCMEX) shared iptables
 
-miniupnpd/config.h:
+miniupnpd$(MUVER)/config.h:
 ifeq ($(RTCONFIG_IGD2),y)
-	cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg $(if $(RTCONFIG_IPV6),--ipv6,) --igd2
+	cd miniupnpd$(MUVER) && ./genconfig.sh --leasefile --vendorcfg $(if $(RTCONFIG_IPV6),--ipv6,) --igd2
 else
-	cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg
+	cd miniupnpd$(MUVER) && ./genconfig.sh --leasefile --vendorcfg
 endif
 
-miniupnpd: $(IPTABLES_TARGET) miniupnpd/config.h
+miniupnpd$(MUVER): $(IPTABLES_TARGET) miniupnpd$(MUVER)/config.h
 	@$(SEP)
-	cp -f ./shared/version.h miniupnpd/.
-	$(MAKE) -C miniupnpd -f Makefile.merlin $(PARALLEL_BUILD)
+	cp -f ./shared/version.h miniupnpd$(MUVER)/.
+	$(MAKE) -C miniupnpd$(MUVER) -f Makefile.merlin $(PARALLEL_BUILD)
 
-miniupnpd-clean:
-	-@$(MAKE) -C miniupnpd -f Makefile.merlin clean
-	-@rm miniupnpd/config.h
+miniupnpd$(MUVER)-clean:
+	-@$(MAKE) -C miniupnpd$(MUVER) -f Makefile.merlin clean
+	-@rm miniupnpd$(MUVER)/config.h
 
-miniupnpd-install:
-	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
-	$(STRIP) $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
+miniupnpd$(MUVER)-install:
+	install -D miniupnpd$(MUVER)/miniupnpd $(INSTALLDIR)/miniupnpd$(MUVER)/usr/sbin/miniupnpd
+	$(STRIP) $(INSTALLDIR)/miniupnpd$(MUVER)/usr/sbin/miniupnpd
 
 # !!TB
 shared: busybox $(if $(RTCONFIG_QTN),libqcsapi_client) $(if $(RTCONFIG_HTTPS),openssl)
@@ -2529,7 +2596,7 @@ endif
 
 FFMPEG_FILTER_CONFIG= $(foreach c, $(2), --$(1)="$(c)")
 
-FFMPEG_DECODERS:=aac ac3 atrac3 h264 jpegls mp3 mpeg1video mpeg2video mpeg4 mpeg4aac mpegvideo png wmav1 wmav2
+FFMPEG_DECODERS:=aac ac3 atrac3 h264 jpegls mp3 mpeg1video mpeg2video mpeg4 mpeg4aac mpegvideo png wmav1 wmav2 svq3
 FFMPEG_CONFIGURE_DECODERS:=$(call FFMPEG_FILTER_CONFIG,enable-decoder,$(FFMPEG_DECODERS))
 
 FFMPEG_PARSERS:=aac ac3 h264 mpeg4video mpegaudio mpegvideo
@@ -2548,11 +2615,12 @@ ffmpeg/stamp-h1: zlib
 		--enable-pthreads --enable-small --disable-encoders --disable-filters \
 		--disable-muxers --disable-devices --disable-ffmpeg --disable-ffplay \
 		--disable-ffserver --disable-ffprobe --disable-avdevice --disable-swscale \
-		--disable-hwaccels --disable-network --disable-bsfs --disable-mpegaudio-hp \
+		--disable-hwaccels --disable-network --disable-bsfs \
 		--enable-demuxers $(FFMPEG_CONFIGURE_DEMUXERS) \
 		--disable-decoders $(FFMPEG_CONFIGURE_DECODERS) \
 		--disable-parsers $(FFMPEG_CONFIGURE_PARSERS) \
 		--disable-protocols $(FFMPEG_CONFIGURE_PROTOCOLS) \
+		--disable-postproc --disable-avfilter \
 		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib" \
 		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		--extra-libs="-L$(TOP)/zlib -lz" \
@@ -2737,10 +2805,47 @@ ifneq ($(MEDIA_SERVER_STATIC),y)
 	$(STRIP) $(INSTALLDIR)/libvorbis/usr/lib/libvorbis.so.0
 endif
 
-minidlna: zlib sqlite ffmpeg libogg flac jpeg libexif libid3tag libvorbis
+minidlna: zlib sqlite ffmpeg libogg flac jpeg libexif libid3tag libvorbis minidlna/Makefile
 	@$(SEP)
-	@cd minidlna && ./genosver.sh
-	@$(MAKE) -C minidlna CC=$(CC) $(if $(MEDIA_SERVER_STATIC),STATIC=1) minidlna $(PARALLEL_BUILD)
+	@$(MAKE) -C minidlna CC=$(CC) $(PARALLEL_BUILD)
+
+minidlna/Makefile: minidlna/configure
+	$(MAKE) minidlna-configure
+
+minidlna/configure:
+	( cd minidlna; ./autogen.sh )
+
+minidlna-configure:
+	cd minidlna && \
+	LIBS="-ldl -lm -lpthread -lz -lexif -ljpeg -lsqlite3 -lid3tag -lFLAC -lvorbis -logg -lavformat -lavcodec -lavutil" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURC -D_FILE_OFFSET_BITS=64 -ffunction-sections -fdata-sections \
+		$(if $(RTN65U,y),-DRTN56U=1) $(if $(or $(RTN66U), $(RTAC66U)),-DRTN66U=1)" \
+	CPPFLAGS="-I$(TOP)/zlib \
+		-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat \
+		-I$(TOP)/ffmpeg/libswscale -I$(TOP)/ffmpeg \
+		-I$(TOP)/flac/include -I$(TOP)/sqlite -I$(TOP)/jpeg \
+		-I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include \
+		-I$(TOP)/libvorbis/include -I$(TOP)/shared" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections \
+		-L$(TOP)/zlib -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections \
+		-L$(TOP)/zlib -L$(TOP)/sqlite/.libs -L$(TOP)/jpeg -L$(TOP)/libvorbis/lib/.libs \
+		-L$(TOP)/libogg/src/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/flac/src/libFLAC/.libs \
+		-L$(TOP)/ffmpeg/libavutil -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavformat \
+		-L$(TOP)/libid3tag/.libs" \
+	ac_cv_header_linux_netlink_h=no \
+	$(CONFIGURE)  --with-db-path=/tmp/minidlna --with-log-path=/tmp/minidlna \
+		--with-os-name=Asuswrt --with-os-version=378.xx --with-os-url="http://asuswrt.lostrealm.ca" \
+		--enable-tivo && \
+	echo "#undef USE_DAEMON" >> config.h
+
+minidlna-clean:
+	-@$(MAKE) -C minidlna clean
+	@rm -f minidlna/Makefile
+	@rm -f minidlna/configure
+
+minidlna-install:
+	install -D minidlna/minidlnad $(INSTALLDIR)/minidlna/usr/sbin/minidlna
+	$(STRIP) $(INSTALLDIR)/minidlna/usr/sbin/minidlna
 
 libgdbm/stamp-h1:
 	cd libgdbm && \
@@ -2859,6 +2964,44 @@ else
 	@true
 endif
 
+.PHONY: wlexe
+wlexe:
+ifeq ($(RTCONFIG_WLEXE),y)
+ifneq ($(wildcard $(SRCBASE_SYS)/wl/exe/GNUmakefile),)
+ifeq ($(ARCH),arm)
+	$(MAKE) TARGETARCH=arm_le ARCH_SFX="" TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_SYS)/wl/exe
+else
+	$(MAKE) TARGETARCH=mips ARCH_SFX="" TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_SYS)/wl/exe
+endif
+	[ -d wlexe ] || install -d wlexe
+	install $(SRCBASE_SYS)/wl/exe/wl wlexe
+ifeq ($(ARCH),arm)
+	install $(SRCBASE_SYS)/wl/exe/socket_noasd/arm_le/wl_server_socket wlexe
+else
+	install $(SRCBASE_SYS)/wl/exe/socket_noasd/mips/wl_server_socket wlexe
+endif
+endif
+endif
+
+.PHONY: wlexe-clean
+wlexe-clean:
+ifneq ($(wildcard $(SRCBASE_SYS)/wl/exe/GNUmakefile),)
+	$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_SYS)/wl/exe clean
+	$(RM) wlexe/wl	
+	$(RM) wlexe/wl_server_socket
+endif
+
+.PHONY: wlexe-install
+wlexe-install:
+ifeq ($(RTCONFIG_WLEXE),y)
+ifneq ($(wildcard $(SRCBASE_SYS)/wl/exe/GNUmakefile),)
+	[ ! -d wlexe ] || install -D -m 755 wlexe/wl $(INSTALLDIR)/wlexe/usr/sbin/wl
+	[ ! -d wlexe ] || install -D -m 755 wlexe/wl_server_socket $(INSTALLDIR)/wlexe/usr/sbin/wl_server_socket
+	[ ! -d wlexe ] || $(STRIP) $(INSTALLDIR)/wlexe/usr/sbin/wl
+	[ ! -d wlexe ] || $(STRIP) $(INSTALLDIR)/wlexe/usr/sbin/wl_server_socket
+endif
+endif
+
 udev:
 	$(MAKE) -C $@ CROSS_COMPILE=$(CROSS_COMPILE) EXTRACFLAGS="$(EXTRACFLAGS)" \
 		PROGRAMS=udevtrigger
@@ -2962,7 +3105,7 @@ openpam-clean:
 	@[ ! -f openpam/Makefile ] || $(MAKE) -C openpam distclean
 	@rm -f openpam/stamp-h1
 
-openvpn/stamp-h1: lzo zlib
+openvpn/stamp-h1: lzo zlib nvram
 	cd openvpn && ./autogen.sh && \
 	export OPENSSL_CRYPTO_CFLAGS="-I$(TOP)/openssl/include"; \
 	export OPENSSL_CRYPTO_LIBS="-L$(TOP)/openssl -lcrypto"; \
@@ -3397,7 +3540,7 @@ inotify-clean:
 	-@$(MAKE) -C inotify clean
 
 wl$(BCMEX)$(EX7):
-	-@$(MAKE) -C wl_arm
+	-@$(MAKE) -C wl$(BCMEX)$(EX7)
 
 wl$(BCMEX)$(EX7)-install:
 	@$(SEP)
@@ -3742,7 +3885,7 @@ bwdpi_sqlite-clean:
 
 bwdpi_sqlite-install: bwdpi_sqlite
 
-traffic_control:
+traffic_control: sqlite
 	cd traffic_control && CC=$(CC) && $(MAKE)
 
 traffic_control-clean:
@@ -3771,7 +3914,7 @@ email-3.1.3/stamp-h1: openssl
 	$(CONFIGURE) --with-ssl --sysconfdir=/etc \
 		CFLAGS=-I$(SRCBASE)/router/openssl/include \
 		LDFLAGS="-L$(SRCBASE)/router/openssl" \
-		LIBS="-lcrypto -lssl"
+		LIBS="-lcrypto -lssl $(if $(RTCONFIG_QCA), -ldl)"
 	touch $@
 
 email-3.1.3: email-3.1.3/stamp-h1

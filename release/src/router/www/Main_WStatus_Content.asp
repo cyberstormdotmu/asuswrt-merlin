@@ -29,7 +29,6 @@ p{
 </style>
 
 <script>
-var $j = jQuery.noConflict();
 overlib_str_tmp = "";
 overlib.isOut = true;
 
@@ -83,9 +82,9 @@ function redraw(){
 function display_clients(clientsarray, obj) {
 	var code, i, client, overlib_str;
 
-	code = '<table width="100%" id="24G" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">';
+	code = '<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">';
 	code += '<thead><tr>';
-	code += '<td width=15%">MAC</td>';
+	code += '<td width="15%">MAC</td>';
 	code += '<td width="16%">IP</td>';
 	code += '<td width="16%">Name</td><td width="10%">RSSI</td><td width="18%">Rx / Tx Rate</td><td width="12%">Connected</td>';
 	code += '<td width="8%">Flags</td>';
@@ -138,7 +137,7 @@ function get_wlclient_list() {
 		timedEvent = 0;
 	}
 
-	$j.ajax({
+	$.ajax({
 		url: '/ajax_wificlients.asp',
 		dataType: 'script', 
 		error: function(xhr){

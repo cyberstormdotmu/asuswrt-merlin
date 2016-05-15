@@ -727,6 +727,12 @@ int chk_proto(int wan_unit, int wan_state){
 		if(limit > 0 && total >= limit){
 			csprintf("wanduck(%d): chk_proto() detect the data limit.\n", wan_unit);
 			update_wan_state(prefix_wan, WAN_STATE_STOPPED, WAN_STOPPED_REASON_DATALIMIT);
+
+			if(nvram_get_int("modem_sms_limit") == 1 && nvram_get_int("modem_sms_limit_send") == 0){
+				notify_rc("start_sendSMS");
+				nvram_set("modem_sms_limit_send", "1");
+			}
+
 			return DISCONN;
 		}
 		else
@@ -836,7 +842,8 @@ int if_wan_phyconnected(int wan_unit){
 	int link_ap = 0;
 #endif
 	int link_changed = 0;
-	char prefix_wan[8], nvram_name[16], wan_proto[16];
+	char prefix[32] = "wanXXXXXX_", tmp[100] = "";
+	char wan_proto[16];
 #ifdef RTCONFIG_USB_MODEM
 	int sim_state = 0;
 #endif
@@ -846,11 +853,19 @@ int if_wan_phyconnected(int wan_unit){
 	else
 		wired_link_nvram = "link_wan";
 
+	snprintf(prefix, sizeof(prefix), "wan%d_", wan_unit);
+
 #ifdef RTCONFIG_USB_MODEM
 	if(dualwan_unit__usbif(wan_unit)){
-		char prefix[32] = "wanXXXXXX_", tmp[100] = "";
 		int find_modem_node = 0;
 		int wan_state = nvram_get_int(nvram_state[wan_unit]);
+
+#ifdef RT4GAC55U
+		if(strlen(usb_if) <= 0){
+			snprintf(usb_if, 16, "%s", nvram_safe_get(strcat_r(prefix, "ifname", tmp)));
+csprintf("wanduck: try to get usb_if=%s.\n", usb_if);
+		}
+#endif
 
 		modem_act_reset = nvram_get_int("usb_modem_act_reset");
 		if(modem_act_reset == 1 || modem_act_reset == 2)
@@ -860,7 +875,8 @@ int if_wan_phyconnected(int wan_unit){
 			return CONNED;
 
 		link_wan[wan_unit] = is_usb_modem_ready(); // include find_modem_type.sh
-		snprintf(modem_type, 32, "%s", nvram_safe_get("usb_modem_act_type"));
+		if(link_wan[wan_unit] && strlen(modem_type) <= 0)
+			snprintf(modem_type, 32, "%s", nvram_safe_get("usb_modem_act_type"));
 		sim_state = nvram_get_int("usb_modem_act_sim");
 
 		if(!strcmp(modem_type, "qmi") || !strcmp(modem_type, "gobi")){
@@ -901,15 +917,21 @@ int if_wan_phyconnected(int wan_unit){
 
 				sim_state = nvram_get_int("usb_modem_act_sim");
 				if(sim_state == 2 || sim_state == 3){
+					sim_lock = 1;
+
 					if(sim_state == 3 || !strcmp(nvram_safe_get("modem_pincode"), "") || nvram_get_int(nvram_auxstate[wan_unit]) == WAN_STOPPED_REASON_PINCODE_ERR)
 						link_wan[wan_unit] = 3;
 				}
 				else if(sim_state != 1)
 					link_wan[wan_unit] = 0;
+
+#ifdef RT4GAC55U
+				if(sim_state >= 1 && sim_state <= 5 && !strcmp(nvram_safe_get("usb_modem_act_auth"), ""))
+					eval("modem_status.sh", "simauth");
+#endif
 			}
 		}
 
-		snprintf(prefix, sizeof(prefix), "wan%d_", wan_unit);
 		nvram_set_int(strcat_r(prefix, "is_usb_modem_ready", tmp), link_wan[wan_unit]);
 if(test_log)
 _dprintf("# wanduck: if_wan_phyconnected: x_Setting=%d, link_modem=%d, sim_state=%d.\n", !isFirstUse, link_wan[wan_unit], sim_state);
@@ -941,12 +963,8 @@ _dprintf("# wanduck: if_wan_phyconnected: x_Setting=%d, link_modem=%d, sim_state
 	}
 	else
 #endif
-	if (dualwan_unit__nonusbif(wan_unit)) {
-		memset(prefix_wan, 0, 8);
-		sprintf(prefix_wan, "wan%d_", wan_unit);
-
-		memset(wan_proto, 0, 16);
-		strcpy(wan_proto, nvram_safe_get(strcat_r(prefix_wan, "proto", nvram_name)));
+	{
+		snprintf(wan_proto, 16, "%s", nvram_safe_get(strcat_r(prefix, "proto", tmp)));
 
 		// check wan port.
 		link_wan[wan_unit] = get_wanports_status(wan_unit);
@@ -997,6 +1015,11 @@ _dprintf("# wanduck: if_wan_phyconnected: x_Setting=%d, link_modem=%d, sim_state
 		if(link_changed){
 #ifdef RTCONFIG_USB_MODEM
 			if(dualwan_unit__usbif(wan_unit) && link_wan[wan_unit]){
+				if(sim_lock){
+					sim_lock = 0;
+					record_wan_state_nvram(wan_unit, WAN_STATE_INITIALIZING, -1, WAN_AUXSTATE_NONE);
+				}
+
 				csprintf("wanduck(%d): PHY_RECONN.\n", wan_unit);
 				return PHY_RECONN;
 			}
@@ -1345,6 +1368,23 @@ void handle_dns_req(int sfd, char *line, int maxlen, struct sockaddr *pcliaddr, 
 	dns_response_packet d_reply;
 	int reply_size;
 	char reply_content[MAXLINE];
+	void *data = &d_reply.answers;
+	size_t data_len = sizeof(d_reply.answers);
+	in_addr_t lan_ipaddr = inet_addr_(nvram_safe_get("lan_ipaddr"));	// router's LAN IP
+#if !defined(RTCONFIG_FINDASUS)
+	unsigned char auth_name_srv[] = {
+		0x00, 0x00, 0x06, 0x00, 0x01, 0x00,
+		0x00, 0x2a, 0x30, 0x00, 0x40, 0x01, 0x61, 0x0c,
+		0x72, 0x6f, 0x6f, 0x74, 0x2d, 0x73, 0x65, 0x72,
+		0x76, 0x65, 0x72, 0x73, 0x03, 0x6e, 0x65, 0x74,
+		0x00, 0x05, 0x6e, 0x73, 0x74, 0x6c, 0x64, 0x0c,
+		0x76, 0x65, 0x72, 0x69, 0x73, 0x69, 0x67, 0x6e,
+		0x2d, 0x67, 0x72, 0x73, 0x03, 0x63, 0x6f, 0x6d,
+		0x00, 0x78, 0x1b, 0x1a, 0xfd, 0x00, 0x00, 0x07,
+		0x08, 0x00, 0x00, 0x03, 0x84, 0x00, 0x09, 0x3a,
+		0x80, 0x00, 0x01, 0x51, 0x80
+	};
+#endif
 	
 	reply_size = 0;
 	memset(reply_content, 0, MAXLINE);
@@ -1383,25 +1423,33 @@ void handle_dns_req(int sfd, char *line, int maxlen, struct sockaddr *pcliaddr, 
 	for(i = 0; i < len; ++i)
 		if(query_name[i] < 32)
 			query_name[i] = '.';
+
+	if ((repeater_mode() || mediabridge_mode()) &&
+	    nvram_match("lan_proto", "dhcp") && nvram_get_int("lan_state_t") != LAN_STATE_CONNECTED)
+		lan_ipaddr = inet_addr_(nvram_default_get("lan_ipaddr"));
 	
 	if(!upper_strcmp(query_name, router_name)){
-#ifdef RTCONFIG_WIRELESSREPEATER
-		if(nvram_get_int("sw_mode") == SW_MODE_REPEATER && nvram_match("lan_proto", "dhcp") && nvram_get_int("lan_state_t") != LAN_STATE_CONNECTED)
-			d_reply.answers.addr = inet_addr_(nvram_default_get("lan_ipaddr"));
-		else
-#endif
-			d_reply.answers.addr = inet_addr_(nvram_safe_get("lan_ipaddr"));	// router's ip
+		d_reply.answers.addr = lan_ipaddr;
 	}
-#ifdef RTCONFIG_FINDASUS
 	else if (!upper_strcmp(query_name, "findasus.local")) {
-		d_reply.answers.addr = inet_addr_(nvram_safe_get("lan_ipaddr"));	// router's ip
-	}
+#ifdef RTCONFIG_FINDASUS
+		d_reply.answers.addr = lan_ipaddr;
+#else
+		data = auth_name_srv;
+		data_len = sizeof(auth_name_srv);
+		d_reply.header.flag_set.flag_num = htons(0x8183);			/* No such name */
+		memcpy(reply_content, &d_reply.header, sizeof(d_reply.header));
+		reply_content[5] = 1;	// Questions
+		reply_content[7] = 0;	// Answer RRS
+		reply_content[9] = 1;	// Authority RRS
+		reply_content[11] = 0;	// Additional RRS
 #endif
+	}
 	else
 		d_reply.answers.addr = htonl(0x0a000001);	// 10.0.0.1
 	
-	memcpy(reply_content+reply_size, &d_reply.answers, sizeof(d_reply.answers));
-	reply_size += sizeof(d_reply.answers);
+	memcpy(reply_content+reply_size, data, data_len);
+	reply_size += data_len;
 	
 	sendto(sfd, reply_content, reply_size, 0, pcliaddr, clen);
 }
@@ -1771,11 +1819,17 @@ int wanduck_main(int argc, char *argv[]){
 		strcat_r(prefix_wan, "auxstate_t", nvram_auxstate[wan_unit]);
 
 		set_disconn_count(wan_unit, S_IDLE);
-#ifdef RTCONFIG_USB_MODEM		
+#ifdef RTCONFIG_USB_MODEM
 		nvram_set_int(strcat_r(prefix_wan, "is_usb_modem_ready", tmp), link_wan[wan_unit]);
-#endif		
-	
+#endif
 	}
+
+#ifdef RTCONFIG_USB_MODEM
+	memset(modem_type, 0, 32);
+#ifdef RT4GAC55U
+	memset(usb_if, 0, 32);
+#endif
+#endif
 
 	loop_sec = uptime();
 
@@ -1840,7 +1894,7 @@ int wanduck_main(int argc, char *argv[]){
 		current_wan_unit = wan_primary_ifunit();
 		other_wan_unit = !current_wan_unit;
 if(test_log)
-_dprintf("wanduck(%d) 1: conn_state %d, conn_state_old %d, conn_changed_state %d, current_state %d.\n"
+_dprintf("wanduck(%d)(first detect start): state %d, state_old %d, changed %d, wan_state %d.\n"
 		, current_wan_unit, conn_state[current_wan_unit], conn_state_old[current_wan_unit], conn_changed_state[current_wan_unit], current_state[current_wan_unit]);
 
 		if(conn_state[current_wan_unit] == CONNED){
@@ -1921,7 +1975,7 @@ _dprintf("wanduck(%d) 1: conn_state %d, conn_state_old %d, conn_changed_state %d
 		rule_setup = 1;
 	}
 if(test_log)
-_dprintf("wanduck(%d) 2: conn_state %d, conn_state_old %d, conn_changed_state %d, current_state %d.\n"
+_dprintf("wanduck(%d)(first detect   end): state %d, state_old %d, changed %d, wan_state %d.\n"
 		, current_wan_unit, conn_state[current_wan_unit], conn_state_old[current_wan_unit], conn_changed_state[current_wan_unit], current_state[current_wan_unit]);
 
 	int first_loop = 1;
@@ -2060,11 +2114,6 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", wan_unit);
 							set_disconn_count(wan_unit, S_COUNT);
 					}
 					else if(conn_state[wan_unit] == CONNED){
-						if(rule_setup == 1 && !isFirstUse){
-							csprintf("\n# DualWAN: Disable direct rule(D2C)\n");
-							rule_setup = 0;
-						}
-
 						conn_changed_state[wan_unit] = D2C;
 						set_disconn_count(wan_unit, S_IDLE);
 					}
@@ -2084,13 +2133,18 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", wan_unit);
 						set_disconn_count(wan_unit, S_IDLE);
 
 #ifdef RTCONFIG_USB_MODEM
+						csprintf("\n# wanduck(usb): type=%s.\n", modem_type);
 						if(dualwan_unit__usbif(wan_unit) &&
 								(!strcmp(modem_type, "ecm") || !strcmp(modem_type, "ncm") || !strcmp(modem_type, "rndis") || !strcmp(modem_type, "asix") || !strcmp(modem_type, "qmi") || !strcmp(modem_type, "gobi"))
-								)
-							;
+								){
+							csprintf("\n# wanduck(usb): skip to run restart_wan_if %d.\n", wan_unit);
+							if(!link_wan[wan_unit] && strlen(modem_type) > 0)
+								memset(modem_type, 0, 32);		
+						}
 						else
 #endif
 						{
+							csprintf("\n# wanduck(%d): run restart_wan_if.\n", wan_unit);
 							memset(cmd, 0, 32);
 							sprintf(cmd, "restart_wan_if %d", wan_unit);
 							notify_rc_and_period_wait(cmd, 30);
@@ -2108,6 +2162,9 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", wan_unit);
 					csprintf("%s: wan(%d) disconn count = %d/%d ...\n", __FUNCTION__, wan_unit, get_disconn_count(wan_unit), max_disconn_count);
 				}
 			}
+if(test_log)
+_dprintf("wanduck(%d)(lb change): state %d, state_old %d, changed %d, cross_state=%d, wan_state %d.\n"
+		, current_wan_unit, conn_state[current_wan_unit], conn_state_old[current_wan_unit], conn_changed_state[current_wan_unit], cross_state, current_state[current_wan_unit]);
 		}
 		else if(sw_mode == SW_MODE_ROUTER && !strcmp(dualwan_mode, "fo")){
 			if(delay_detect == 1 && wandog_delay > 0){
@@ -2127,7 +2184,7 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", wan_unit);
 
 			current_state[current_wan_unit] = nvram_get_int(nvram_state[current_wan_unit]);
 if(test_log)
-_dprintf("wanduck(%d) 3: conn_state %d, conn_state_old %d, conn_changed_state %d, current_state %d.\n"
+_dprintf("wanduck(%d)(fo    phy): state %d, state_old %d, changed %d, wan_state %d.\n"
 		, current_wan_unit, conn_state[current_wan_unit], conn_state_old[current_wan_unit], conn_changed_state[current_wan_unit], current_state[current_wan_unit]);
 
 			if(current_state[current_wan_unit] == WAN_STATE_DISABLED){
@@ -2154,12 +2211,12 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", current_wan_unit);
 #endif
 						conn_state[current_wan_unit] = if_wan_connected(current_wan_unit, current_state[current_wan_unit]);
 if(test_log)
-_dprintf("wanduck(%d) 4: conn_state %d, conn_state_old %d, conn_changed_state %d, current_state %d.\n"
+_dprintf("wanduck(%d)(fo   conn): state %d, state_old %d, changed %d, wan_state %d.\n"
 		, current_wan_unit, conn_state[current_wan_unit], conn_state_old[current_wan_unit], conn_changed_state[current_wan_unit], current_state[current_wan_unit]);
 				}
 			}
 
-			if(conn_state[current_wan_unit] == PHY_RECONN || conn_changed_state[current_wan_unit] == PHY_RECONN){
+			if(conn_state[current_wan_unit] == PHY_RECONN){
 				conn_changed_state[current_wan_unit] = PHY_RECONN;
 
 				conn_state_old[current_wan_unit] = DISCONN;
@@ -2243,7 +2300,7 @@ _dprintf("wanduck(%d) 4: conn_state %d, conn_state_old %d, conn_changed_state %d
 
 			record_conn_status(current_wan_unit);
 if(test_log)
-_dprintf("wanduck(%d) 5: conn_state %d, conn_state_old %d, conn_changed_state %d, current_state %d.\n"
+_dprintf("wanduck(%d)(fo change): state %d, state_old %d, changed %d, wan_state %d.\n"
 		, current_wan_unit, conn_state[current_wan_unit], conn_state_old[current_wan_unit], conn_changed_state[current_wan_unit], current_state[current_wan_unit]);
 		}
 		else if(sw_mode == SW_MODE_ROUTER && !strcmp(dualwan_mode, "fb")){
@@ -2297,12 +2354,12 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", current_wan_unit);
 						conn_state[other_wan_unit] = if_wan_connected(other_wan_unit, current_state[other_wan_unit]);
 					csprintf("wanduck: detect the fail-back line(%d)...\n", other_wan_unit);
 if(test_log)
-_dprintf("wanduck(%d) fail-back: conn_state %d, conn_state_old %d, conn_changed_state %d, current_state %d.\n"
+_dprintf("wanduck(%d) fail-back: state %d, state_old %d, changed %d, wan_state %d.\n"
 		, other_wan_unit, conn_state[other_wan_unit], conn_state_old[other_wan_unit], conn_changed_state[other_wan_unit], current_state[other_wan_unit]);
 				}
 			}
 
-			if(conn_state[current_wan_unit] == PHY_RECONN || conn_changed_state[current_wan_unit] == PHY_RECONN){
+			if(conn_state[current_wan_unit] == PHY_RECONN){
 				conn_changed_state[current_wan_unit] = PHY_RECONN;
 
 				conn_state_old[current_wan_unit] = DISCONN;
@@ -2454,7 +2511,7 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", current_wan_unit);
 				}
 			}
 
-			if(conn_state[current_wan_unit] == PHY_RECONN || conn_changed_state[current_wan_unit] == PHY_RECONN){
+			if(conn_state[current_wan_unit] == PHY_RECONN){
 				conn_changed_state[current_wan_unit] = PHY_RECONN;
 
 				conn_state_old[current_wan_unit] = DISCONN;
@@ -2573,7 +2630,7 @@ _dprintf("wanduck(%d): detect the modem to be reset...\n", current_wan_unit);
 			conn_state_old[current_wan_unit] = conn_state[current_wan_unit];
 		}
 if(test_log)
-_dprintf("wanduck(%d) 6: conn_state %d, conn_state_old %d, conn_changed_state %d, current_state %d.\n"
+_dprintf("wanduck(%d)(all   end): state %d, state_old %d, changed %d, wan_state %d.\n"
 		, current_wan_unit, conn_state[current_wan_unit], conn_state_old[current_wan_unit], conn_changed_state[current_wan_unit], current_state[current_wan_unit]);
 
 #ifdef RTCONFIG_DUALWAN
@@ -2600,8 +2657,16 @@ _dprintf("wanduck(%d) 6: conn_state %d, conn_state_old %d, conn_changed_state %d
 				led_control(LED_WAN, LED_OFF);
 			}
 #endif
-			if(rule_setup && cross_state == CONNED && !isFirstUse){
-				csprintf("\n# DualWAN: Disable direct rule(isFirstUse)\n");
+			if(!rule_setup && (cross_state == DISCONN || isFirstUse)){
+				if(isFirstUse)
+					csprintf("\n# LB: Enable direct rule(isFirstUse)\n");
+				else
+					csprintf("\n# LB: Enable direct rule\n");
+				rule_setup = 1;
+				stop_nat_rules();
+			}
+			else if(rule_setup && cross_state == CONNED && !isFirstUse){
+				csprintf("\n# LB: Disable direct rule\n");
 				rule_setup = 0;
 				start_nat_rules();
 			}
@@ -2752,7 +2817,11 @@ _dprintf("wanduck(%d) 6: conn_state %d, conn_state_old %d, conn_changed_state %d
 			if(get_dualwan_by_unit(other_wan_unit) != WANS_DUALWAN_IF_NONE
 					&& (get_disconn_count(current_wan_unit) >= max_disconn_count
 #ifdef RTCONFIG_USB_MODEM
-							|| (!link_wan[current_wan_unit] && dualwan_unit__usbif(current_wan_unit))
+							|| (!link_wan[current_wan_unit] && dualwan_unit__usbif(current_wan_unit)
+#ifdef RT4GAC55U
+									&& strcmp(usb_if, "")
+#endif
+									)
 #endif
 							)
 					)

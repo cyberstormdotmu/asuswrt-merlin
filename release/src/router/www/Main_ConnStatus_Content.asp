@@ -19,11 +19,6 @@
 
 resolveIPs = '<% nvram_get("webui_resolve_conn"); %>';
 
-function initial(){
-	show_menu();
-	load_body();
-}
-
 function onSubmitCtrl(o, s) {
 	document.form.action_mode.value = s;
 	updateOptions();
@@ -46,11 +41,10 @@ function updateOptions(){
 }
 
 
-var $j = jQuery.noConflict();
 var _responseLen;
 var noChange = 0;
 function checkCmdRet(){
-	$j.ajax({
+	$.ajax({
 		url: '/cmdRet_check.htm',
 		dataType: 'html',
 		
@@ -95,7 +89,7 @@ function checkCmdRet(){
 
 </script>
 </head>
-<body onload="initial();">
+<body onload="show_menu();">
 <div id="TopBanner"></div>
 <div id="Loading" class="popup_bg"></div>
 <iframe name="hidden_frame" id="hidden_frame" src="" width="0" height="0" frameborder="0"></iframe>

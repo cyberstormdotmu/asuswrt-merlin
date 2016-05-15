@@ -43,13 +43,14 @@ endif
 
 ifeq ($(RTCONFIG_TRAFFIC_CONTROL),y)
 CFLAGS += -I$(TOP)/traffic_control
+CFLAGS += -I$(TOP)/sqlite
 endif
 
 OBJS = httpd.o cgi.o ej.o 
 OBJS += web.o common.o nvram_f.o 
 OBJS += aspbw.o initial_web_hook.o
 OBJS += apps.o
-OBJS += sysinfo.o
+OBJS += sysinfo.o data_arrays.o
 
 ifeq ($(CONFIG_RALINK),y)
 OBJS += web-ralink.o
@@ -82,6 +83,8 @@ OBJS += pwenc.o
 endif
 
 LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
+# for ceil()
+LIBS += -lm
 
 ifeq ($(RTCONFIG_PUSH_EMAIL),y)
 LIBS += -L$(TOP)/openssl -lcrypto -lssl -ldl
@@ -126,11 +129,16 @@ endif
 
 ifeq ($(RTCONFIG_TRAFFIC_CONTROL),y)
 LIBS += -L$(TOP)/traffic_control -ltraffic_control
+LIBS += -L$(TOP)/sqlite/.libs -lsqlite3
 endif
 
 ifeq ($(RTCONFIG_GEOIP),y)
 CFLAGS += -I$(TOP)/GeoIP-1.6.2/libGeoIP
 LIBS += -L$(TOP)/GeoIP-1.6.2/libGeoIP/.libs -lGeoIP
+endif
+
+ifeq ($(RTCONFIG_QCA),y)
+LIBS += -lpthread
 endif
 
 export CFLAGS
