@@ -32,6 +32,7 @@ typedef enum {
 } iconv_result;
 
 #ifdef HAVE_ICONV
+#include <iconv.h>
 static iconv_result
 do_iconv(const char* to_ces, const char* from_ces,
 	 ICONV_CONST char *inbuf,  size_t inbytesleft,

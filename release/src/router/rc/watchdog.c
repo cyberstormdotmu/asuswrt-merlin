@@ -340,20 +340,27 @@ void btn_check_vtx(void)
 	if (button_pressed(BTN_LED))
 	{
 		TRACE_PT("button BTN_LED pressed\n");
-
-		if (LED_status_changed == 0)
+		char *cmd = nvram_safe_get("btn_led_cmd");
+		if (strlen(cmd) == 0)
 		{
-			if (!nvram_get_int("led_disable"))
+			if (LED_status_changed == 0)
 			{
-				nvram_set_int("led_disable", 1);
+				if (!nvram_get_int("led_disable"))
+				{
+					nvram_set_int("led_disable", 1);
+				}
+				else
+				{
+					nvram_set_int("led_disable", 0);
+				}
+				setup_leds();
+				LED_status_changed = 1;
+				return;
 			}
-			else
-			{
-				nvram_set_int("led_disable", 0);
-			}
-			setup_leds();
-			LED_status_changed = 1;
-			return;
+		}
+		else
+		{
+			system(cmd);
 		}
 	}
 	else{

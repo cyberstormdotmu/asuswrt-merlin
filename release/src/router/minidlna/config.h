@@ -111,6 +111,8 @@
 
 /* Define if you have the iconv() function and it works. */
 /* #undef HAVE_ICONV 1 */
+#define HAVE_ICONV 1
+#define HAVE_ICONV_H
 
 /* Define to 1 if you have the <id3tag.h> header file. */
 #define HAVE_ID3TAG_H 1

@@ -31,7 +31,7 @@ ifneq ($(STATIC),1)
 LDFLAGS += -L$(TOP)/zlib -L$(TOP)/sqlite/.libs -L$(TOP)/jpeg -L$(TOP)/libvorbis/lib/.libs \
 	-L$(TOP)/libogg/src/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/flac/src/libFLAC/.libs \
 	-L$(TOP)/ffmpeg/libavutil -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavformat \
-	-L$(TOP)/libid3tag/.libs
+	-L$(TOP)/libid3tag/.libs -L$(TOP)/libiconv-1.14/lib/.libs
 else
 LDFLAGS += -static
 endif
@@ -85,9 +85,10 @@ LIBS = -lpthread -ldl -lm \
 	$(TOP)/zlib/libz.a \
 	$(TOP)/ffmpeg/libavformat/libavformat.a \
 	$(TOP)/ffmpeg/libavcodec/libavcodec.a \
-	$(TOP)/ffmpeg/libavutil/libavutil.a
+	$(TOP)/ffmpeg/libavutil/libavutil.a \
+	$(TOP)/libiconv-1.14/lib/.libs/libiconv.a
 else
-LIBS += -lpthread -lm -ldl -lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil
+LIBS += -lpthread -lm -ldl -lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -liconv
 endif
 
 TESTUPNPDESCGENOBJS = testupnpdescgen.o upnpdescgen.o
